@@ -3,26 +3,11 @@
 enableBookmarking(store = "server")
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-
-clist <- readRDS("src/data/clist.rds")
-elist <- readRDS("src/data/elist.rds")
-all_cds <- readRDS("src/data/all_cds.rds")
-avg_expr <- readRDS("src/data/avg_expr.rds")
-g_all <- readRDS("src/data/g_all.rds")
-time_umap_list <- readRDS("src/data/time_umap_list.rds")
-time_deg_list <- readRDS("src/data/time_deg_list.rds")
-tf_tbl <- read.csv("src/data/TFcisBP_dataCSV839.csv")
-cell_type_markers <- read.csv("src/data/Celltypemarkers.csv")
-graph_genes <- readRDS("src/data/graph_genes.rds")
-
 sexpr <- exprs(all_cds)
 rownames(sexpr) <- fData(all_cds)$gene_short_name
 sexpr_nmlog <- all_cds@auxOrderingData$normalize_expr_data
 rownames(sexpr_nmlog) <- fData(all_cds)$gene_short_name
 pmeta <- pData(all_cds)
-
-
-
 
 ### Which meta data to show, and in what order ###
 
