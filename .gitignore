@@ -5,4 +5,4 @@
 data/*
 !data/.gitkeep 
 data-raw/*
-!data/*.R
+!data/preprocess.R
