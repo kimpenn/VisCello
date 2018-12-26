@@ -1,0 +1,44 @@
+Package: VisCello
+Type: Package
+Title: A visualization tool for single cell data of C.elegans embrogenesis
+Version: 0.9.0
+Author: Qin Zhu, Jonathan Packer, Junyhong Kim, John Murray, Bob Waterston
+Maintainer: Qin Zhu <zhuqin@pennmedicine.upenn.edu>
+Description: A visualization tool for C.elegans scRNA-Seq data. Also applicable to other scRNA-Seq/scATAC-Seq data as a hosting, exploration and analysis platfrom (see VisCello.base). 
+Depends:
+    R (>= 3.1.0),
+    shiny,
+    shinyBS,
+    devtools,
+    shinyWidgets,
+    htmlwidgets,
+    shinyBS,
+    R.utils,
+    purrr,
+    ggplot2,
+    RColorBrewer,
+    reshape2,
+    gridExtra,
+    shinythemes,
+    plotly,
+    heatmaply,
+    pheatmap,
+    DT,
+    dplyr,
+    openxlsx,
+    knitr,
+    monocle,
+    clusterProfiler,
+    celegans.db,
+    ggraph,
+    tidygraph
+Imports:
+    reticulate,
+    limma,
+    irlba
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+biocViews: Software, Sequencing, RNASeq, GeneExpression, DifferentialExpression, AnnotationData,
+        Caenorhabditis_elegans
+RoxygenNote: 6.1.1

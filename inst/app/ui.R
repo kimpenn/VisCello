@@ -1,0 +1,290 @@
+
+# This is the user-interface definition of a Shiny web application.
+# You can find out more about building applications with Shiny here:
+#
+# http://shiny.rstudio.com
+#
+
+
+function(request) {
+    fluidPage(
+        div(style="padding: 1px 0px; width: '100%'",
+            titlePanel(
+                title="", windowTitle="CeVisualizer"
+            )
+        ),
+        navbarPage(
+    title = div(
+        "C.elegans Embryogenesis",
+        div(
+         id = "sys_control",
+        dropdownButton(
+            inputId="load_state_dropdown",
+            actionButton("exit_app","Exit App", icon = icon("power-off"), width = "115px", class = "btn-primary", onclick = "setTimeout(function(){window.close();}, 100); "),
+            tags$br(),
+            fluidRow(column(12,downloadButton("state_save_sc","Save State", icon = icon("save"),class = "btn_leftAlign btn-primary", style="width: 115px"))),
+            tags$br(),
+            fileInput2('uploadState', NULL, buttonLabel = "Load State", width = "50px", accept = ".rda"),
+            uiOutput("refreshOnUpload"),
+            circle = T, label ="System Control", tooltip=T, right = T,
+            status = "syscontrol",
+            icon = icon("cog")
+        )
+        )
+    ),
+    position = "fixed-top",
+    theme = shinytheme("flatly"),
+    # Application title
+    tabPanel(
+        "Cell Type",
+        mainPanel(
+            NULL,
+            width = 12,
+            tags$head(
+                tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+            ),
+            singleton(tags$script(type="text/javascript", "
+                                  $(document).ready(function() {
+                                  $('input[type='text'], textarea').attr({autocomplete:'off', spellcheck:false, autocorrect:'off', autocapitalize:'off'});
+
+                                  ")),
+            singleton(tags$script(type="text/javascript", "
+                                  $(document).ready(function() {
+                                  Shiny.addCustomMessageHandler('showalert', function(message) {
+                                  alert(message);
+                                  });
+                                  });
+                                  ")
+            ),
+            tabsetPanel(
+                tabPanel(
+                    tags$b("Explorer"),
+                    explorer_ui("main")
+                ),
+                tabPanel(
+                    tags$b("Expression Plot"),
+                    tags$br(),
+                    fluidRow(
+                        column(3, selectizeInput("bp_gene", "Search Gene:", NULL)),
+                        column(3, uiOutput("bp_group_ui")),
+                        column(3, numericInput("bp_downsample", "Downsample #", min=2, max = 10000, value=100)),
+                        column(3, selectInput("bp_plot_type", "Plot Type", choices = list("Box plot" = "box", "Violin plot" = "violin", "Plot points" = "points")))
+                    ),
+                    uiOutput("bp_include_ui"),
+                    tags$hr(),
+                    plotOutput("bp_gene_plot")
+                ),
+                tabPanel(
+                    tags$b("Cell Type Marker"),
+                    tags$br(),
+                    fluidRow(
+                        column(3, textInputCode("ct_lineage", "Search Lineage:", placeholder = "lineage name substring")),
+                        column(3, textInputCode("ct_cell", "Search Cell:", placeholder = "cell name substring")),
+                        column(3, textInputCode("ct_tissue", "Search Tissue:", placeholder = "tissue cluster")),
+                        column(3, textInputCode("ct_marker", "Search Gene:", placeholder = "gene name"))
+                    ),
+                    DT::dataTableOutput("ct_marker_tbl")
+                ),
+                tabPanel(tags$b("Expression Profile"),
+                         tags$br(),
+                         fluidRow(
+                             column(3, selectInput("ge_type_choice", "Choose Profile", choices = list("Tissue Type" = "tissue", "Cell Type" = "celltype", "Early Lineage" = "lineage"))),
+                             column(3, selectInput("ge_data_scale", "Data Scale", choices = list("Log10 scaled" = "Log10 scaled", "Log10" = "Log10", "Count" = "Count"))),
+                             column(3, selectInput("ge_order_by", "Order By", choices = list("Fano Factor" = "Fano Factor", "Variance" = "Variance", "Expression Level" = "Expression Level"))),
+                             column(3, numericInput("ge_plot_num", "Include Gene#", value = 300, step=1, min=2))
+                         ),
+                         DT::dataTableOutput("gep_tbl"),
+                         fluidRow(
+                             column(7),
+                             column(3,
+                                    selectInput("ge_download_tbl_type", NULL, choices = list("Download this table (filtered)" = "cur", "Download  entire table" = "all"))
+                             ),
+                             column(2, downloadButton('download_ge_tbl', 'Download',class = "btn_rightAlign"))
+                         ),
+                         hr(),
+                         #uiOutput("ge_hmap_ui"),
+                         plotOutput("ge_hmap", height="600px"),
+                         fluidRow(
+                             column(6),
+                             #column(6, materialSwitch(inputId = "interactive_ge_hmap", tags$b("interactive"), value = F, status = "success")),
+                             column(6, downloadButton("download_ge_hmap", "Download Heatmap", class = "btn_rightAlign"))
+                         )
+                )
+            ),
+            tags$br(),
+            tags$br(),
+            tags$br(),
+            tags$br(),
+            tags$br(),
+            tags$br(),
+            tags$br()
+            #downloadButton('download_ct_tbl', 'Download',class = "btn_rightAlign")
+        )
+    ),
+    tabPanel(
+        "Early Lineage",
+        tabsetPanel(
+            tabPanel(
+                tags$b("Explorer"),
+                width = 12,
+                explorer_ui("early")
+            ),
+            tabPanel(
+                tags$b("Marker Imaging"),
+                wellPanel(
+                    fluidRow(
+                        column(3, selectInput("image_colorBy", "Color by", choices = image_colorBy_choices)),
+                        column(3, selectInput("image_pal", "Palette", choices=numeric_palettes)),
+                        column(3, numericInput("image_ploth", "Plot Height", min=1, value = 10, step=1)),
+                        column(3, numericInput("image_plotw", "Plot Width", min=1, value = 7, step=1))
+                    )
+                ),
+                uiOutput("image_graph_plot_ui")
+            )
+        )
+    ),
+    tabPanel(
+        "Differential Expression",
+        wellPanel(
+            fluidRow(
+                column(3, uiOutput("de_sample_ui")),
+                column(3, uiOutput("de_metaclass_ui")),
+                uiOutput("de_g1_ui"),
+                uiOutput("de_g2_ui")
+            ),
+            fluidRow(
+                column(8, uiOutput("cur_de_group")),
+                column(4,
+                       actionButton("run_de", "Run DE", class = "btn-info btn_rightAlign"),
+                       uiOutput("add_clus_ui"),
+                       uiOutput("downsample_de_ui")
+                )
+            )
+        ),
+        fluidRow(
+            column(5,
+                   fluidRow(
+                       column(8, uiOutput("de_proj_type_ui")),
+                       column(4,
+                              circleButton("de_plot_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                              shinyBS::bsTooltip(
+                                  "de_plot_config_reset",
+                                  title = "Reset plot configuration",
+                                  options = list(container = "body")
+                              ),
+                              uiOutput("de_plot_configure_ui")
+                       )
+                   ),
+                   uiOutput("de_plot2d_ui"),
+                   materialSwitch(inputId = "interactive_de_plot", tags$b("interactive"), value = F, status = "success"),
+                   tags$br(),
+                   DT::dataTableOutput("deg_summary")
+            ),
+            column(7,
+                   fluidRow(
+                       column(12,
+                              circleButton("hmap_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                              shinyBS::bsTooltip(
+                                  "hmap_config_reset",
+                                  title = "Reset heatmap configuration",
+                                  options = list(container = "body")
+                              ),
+                              uiOutput("hmap_configure_ui")
+                        )
+                   ),
+                   uiOutput("de_hmap_ui"),
+                   fluidRow(
+                       column(6, materialSwitch(inputId = "interactive_hmap", tags$b("interactive"), value = F, status = "success")),
+                       column(6, uiOutput("download_hmap_ui"))
+                   )
+            )
+        ),
+        tags$hr(),
+        fluidRow(
+            column(12,
+                   uiOutput("deg_tabs"),
+                  uiOutput("download_de_res_ui")
+            )
+        ),
+        tags$hr(),
+        fluidRow(
+            column(12,
+                   uiOutput("go_ui")
+            )
+        )
+
+    ),
+
+    tabPanel(
+        "Dynamic Pattern",
+        tabsetPanel(
+            tabPanel(
+                tags$b("Global Dynamic Pattern:"),
+                width = 12,
+                fluidRow(
+                    column(4, selectInput("dynamic_barplot_type", "Plot global pattern:", choices = list("Number of Expressed Genes per Cell" = "num.genes.expressed", "Number of UMI per Cell" = "n.umi"))),
+                    column(4, selectInput("dynamic_barplot_scale", "Data scale:", choices = c("log10", "identity"))),
+                    column(4, numericInput("dynamic_barplot_bin", "Number of time bin:", value = 30, step = 1, min = 2))
+                ),
+                plotOutput("dynamic_gene_num_barplot"),
+                hr(),
+                tags$b("Temporal Composition Change:"),
+                tags$br(),
+                fluidRow(
+                    column(12, plotlyOutput("meta_line_tt"))
+                )
+            ),
+            tabPanel(
+                tags$b("Cell Type Differentiation"),
+                fluidRow(
+                    column(6,
+                           fluidRow(
+                               column(6, selectInput("dy_ctype_choice", "Cell Type", choices = names(time_umap_list))),
+                               column(6, selectizeInput("dy_ctype_gene", "Search Gene:", NULL, multiple = T))
+                           ),
+                           plotOutput("dy_proj_show")
+                    ),
+                    column(6,
+                           fluidRow(
+                               column(6, numericInput("dy_hmap_ngene", "# Genes", value = 50, min = 2, max = 500)),
+                               column(6, numericInput("dy_hmap_ecut", "Min Expr", value = 0.1, min = 0))
+                           ),
+                           plotOutput("dy_hmap_show")
+                    )
+                ),
+                fluidRow(
+                    column(12, DT::dataTableOutput("dy_de_tbl"))
+                ),
+                fluidRow(
+                    column(6),
+                    column(3, checkboxInput("dy_filter_tf", "Filter for TFs", value = F)),
+                    column(3, downloadButton("download_dy_res", "Download DE Table", class = "btn_rightAlign"))
+                )
+
+
+            )
+            # tabPanel(
+            #     tags$b("Branch Point Analysis")
+            # )
+        )
+    ),
+    tabPanel(
+        "Tutorial",
+        tags$p("To be added.")
+    ),
+    header = tagList(
+        tags$br(),
+        tags$br(),
+        tags$br(),
+        tags$br()
+    ),
+
+    footer = tagList(
+        tags$br(),
+        tags$br(),
+        tags$br(),
+        tags$br()
+    )
+            )
+        )
+}
