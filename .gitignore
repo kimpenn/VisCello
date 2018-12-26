@@ -3,4 +3,6 @@
 .RData
 .Ruserdata
 data/*
+!data/.gitkeep 
 data-raw/*
+!data/*.R
