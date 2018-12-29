@@ -18,8 +18,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         factor_cols <- sapply(colnames(cmeta$df)[-1], function(x) {
             ifelse(!is.numeric(cmeta$df[[x]]), x, NA)
         })
-        pvals$factor_cols <- c(factor_cols[!is.na(factor_cols)], "Cluster")
-        ev$meta_custom <- c(pvals$factor_cols[!pvals$factor_cols %in% showcols_advanced])
+        ev$factor_cols <- c(factor_cols[!is.na(factor_cols)], "Cluster")
+        ev$meta_custom <- c(ev$factor_cols[!ev$factor_cols %in% showcols_advanced])
     })
     
     output$eui <- renderUI({
@@ -48,20 +48,24 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                         )
                        ),
                        uiOutput(ns("plot_scalecolor_ui")),
-                       fluidRow(
-                           column(6,
-                                  numericInput(ns("marker_size"), "Point Size", min = 0.1, max = 5, value = 1, step = 0.1)
-                           ),
-                           column(6,
-                                  numericInput(ns("text_size"), "Text Size", min = 0.1, max = 5, value = 1, step = 0.1)
-                           )
-                       ),
                        uiOutput(ns("g_limit_ui")),
-                       checkboxInput(ns('show_cellSelect'), tags$b('Cell Selection'), FALSE)
-                   ),
-                   uiOutput(ns("selectCell_panel"))
+                       uiOutput(ns("data_highlight")),
+                       uiOutput(ns("selectCell_panel"))
+                   )
             ),
             column(8,
+                   fluidRow(
+                       column(8),
+                       column(4,
+                              circleButton(ns("plot_config_reset"), icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                              shinyBS::bsTooltip(
+                                  ns("plot_config_reset"),
+                                  title = "Reset plot configuration",
+                                  options = list(container = "body")
+                              ),
+                              uiOutput(ns("plot_configure_ui"))
+                       )
+                   ),
                    uiOutput(ns("plot_ui")) %>% withSpinner(),
                    # fluidRow(
                    #     column(8),
@@ -115,33 +119,52 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     output$plot_scalecolor_ui <- renderUI({
         ns = session$ns
         req(input$proj_colorBy)
+        if(input$proj_colorBy == 'Gene Expression') {
+            selectInput(ns("log_transform_gene"), "Data scale", choices=list("log2norm"="log2", "raw" = "raw"))
+        } else if(!input$proj_colorBy %in% ev$factor_cols){
+            selectInput(ns("log_transform"), "Data scale", choices=list("log10"="log10", "identity" = "identity"))
+        } else {
+            return()
+        }
+    })
+    
+    output$plot_configure_ui <- renderUI({
+        input$plot_config_reset
+        ns <- session$ns
+        
+        req(input$proj_colorBy)
         if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
             default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$proj_colorBy)]
         } else {
             default_pal <- NULL
         }
+        
         if(input$proj_colorBy == 'Gene Expression') {
-            sel1<-selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
-            sel2 <- selectInput(ns("log_transform_gene"), "Data scale", choices=list("log2norm"="log2", "raw" = "raw"))
-        } else if(input$proj_colorBy %in% pvals$factor_cols){
+            sel<-selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
+        } else if(input$proj_colorBy %in% ev$factor_cols){
             if(grepl("time.bin", input$proj_colorBy)) {
-                sel1 <- selectInput(ns("numericbin_pal"), "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
+                sel <- selectInput(ns("numericbin_pal"), "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
             } else {
-                sel1 <- selectInput(ns("factor_pal"), "Palette", choices=factor_color_opt(), selected=default_pal)
+                sel <- selectInput(ns("factor_pal"), "Palette", choices=factor_color_opt(), selected=default_pal)
             }
-            selected = if(grepl("lineage", input$proj_colorBy, ignore.case = T)) "ot" else "l"
-            sel2 <- selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected=selected)
         } else {
-            sel1<-selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes)
-            sel2 <- selectInput(ns("log_transform"), "Data scale", choices=list("log10"="log10", "identity" = "identity"))
+            sel<- selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
         }
-        tagList(
-            fluidRow(
-                column(6, sel1),
-                column(6, sel2)
-            )
-        )
+        
+        dropdownButton2(inputId=ns("plot_configure"),
+                        fluidRow(
+                            column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, max = 5, value = 1, step = 0.1)),
+                            column(6, numericInput(ns("text_size"), "Text Size", min = 1, max = 5, value = 3, step = 0.1))
+                        ),
+                        fluidRow(
+                            column(6, sel),
+                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none")))
+                        ),
+                        numericInput(ns("alpha_level"), "Transparency (for cells not selected)", min = 0, max = 1, value = 0.01, step = 0.01),
+                        circle = T, label ="Configure Plot", tooltip=T, right = T,
+                        icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
     })
+    
 
     observe({
         req(input$proj_type, input$proj_colorBy)
@@ -213,7 +236,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         input$gene_list
         ns <- session$ns
         isolate({
-            if(input$proj_colorBy %in% pvals$factor_cols) {
+            if(input$proj_colorBy %in% ev$factor_cols) {
                 factors <- as.character(levels(factor(ev$meta[[input$proj_colorBy]])))
                 names(factors) <- factors
                 return(
@@ -351,7 +374,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         gene_exprlim <- NULL
         factor_color <- NULL
         trans <- NULL
-        if(input$proj_colorBy %in% pvals$factor_cols) {
+        if(input$proj_colorBy %in% ev$factor_cols) {
             plot_class = "factor"
             if(!is.null(input$factor_compo)) {
                 proj$alpha <- ifelse(proj[[input$proj_colorBy]] %in% input$factor_compo, "f", "t")
@@ -430,6 +453,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         pvals$factor_color <- factor_color
         pvals$numeric_pal <- input$numeric_pal
         pvals$marker_size <- input$marker_size
+        pvals$text_size <- input$text_size
         pvals$factor_compo <- input$factor_compo
         pvals$alpha_level <-input$alpha_level
         pvals$log_transform <- trans
@@ -445,7 +469,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         assign("pvals", reactiveValuesToList(pvals), env = .GlobalEnv)
         #isolate({
             if(pvals$plot_class == "factor") {
-                pp<-plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = 4)
+                pp<-plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = pvals$text_size)
             }
             else if(pvals$plot_class == "numeric") {
                 pp<-plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$numeric_pal, size = pvals$marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=T, trans = pvals$log_transform)
@@ -643,34 +667,13 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
 
     # Cell Select
     output$selectCell_panel <- renderUI({
-        req(input$show_cellSelect)
+        req(length(ev$cells) > 0)
         ns = session$ns
-        wellPanel(
-            class = "SidebarControl",
+        selected_samples <- ev$cells
+        ns <- session$ns
+        tagList(
             fluidRow(
-                column(6, uiOutput(ns("selectCell_text"))),
-                column(6, 
-                       numericInput(ns("alpha_level"), "Transparency", min = 0, max = 1, value = 0.01, step = 0.01)
-                )
-                # column(6, modalTriggerButton(ns("cellSelectorDlgBtn"), paste0("#", ns("cellSelectorDlg")), "Cell Selector", type = "button", class = "btn-primary"),
-                #        modalConfirmDialog(
-                #            id=ns("cellSelectorDlg"),
-                #            header = "Cell Selector: ",
-                #            body = tagList(
-                #                uiOutput(ns("cell_selectors")),
-                #                actionButton(ns("more_selector"), "Add another filter")
-                #            ),
-                #            footer=list(
-                #                modalTriggerButton("submitConfirmDlgBtn", paste0("#", ns("cellSelectorDlg")), "Select Cells", class = "btn action-button btn-primary"),
-                #                tags$button(type = "button", class = "btn btn-default", 'data-dismiss' = "modal", "Cancel")
-                #            ),
-                #            size = "m"
-                #        )
-                # )
-            ),
-            uiOutput(ns("data_highlight")),
-            fluidRow(
-                column(12, selectInput(ns("selectCell_goal"), "What to do with selected cells:", choices = list(
+                column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells"), choices = list(
                     "Name selected cell subset" = "addmeta",
                     "Compute new PCA/UMAP with selected cells" = "compdimr",
                     "Download expression data (Monocle cds format) of selected cells" = "downcell",
@@ -741,18 +744,6 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         )
     })
 
-
-    output$selectCell_text <- renderUI({
-        selected_samples <- ev$cells
-        ns <- session$ns
-        return(
-            tagList(
-                div(p(strong('Selected: '), pivot_help_UI(ns("cellSelection"), title = NULL, label = NULL, type = "link", tooltip = F))),
-                p(paste(length(selected_samples), "cells"))
-            )
-        )
-    })
-
      observe({
          #req(!is.null(input$interactive_2dplot))
          #if(!input$interactive_2dplot) {
@@ -763,7 +754,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                            pvals$proj[[plot_cols[2]]] >= area_selected$ymin & pvals$proj[[plot_cols[2]]] <= area_selected$ymax)]
              } else {
                  req(input$proj_colorBy)
-                 if(input$proj_colorBy %in% pvals$factor_cols & !is.null(input$factor_compo)) {
+                 if(input$proj_colorBy %in% ev$factor_cols & !is.null(input$factor_compo)) {
                      ev$cells <- rownames(ev$meta)[ev$meta[[input$proj_colorBy]] %in% input$factor_compo]
                  } else if(input$proj_colorBy != "Gene Expression" & !is.null(input$numeric_range)) {
                      filter_std <- ev$meta[[input$proj_colorBy]] >= input$numeric_range[1] & ev$meta[[input$proj_colorBy]] <= input$numeric_range[2]
