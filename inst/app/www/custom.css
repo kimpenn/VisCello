@@ -42,4 +42,9 @@ border-color: #2c3e50
      margin-bottom: 0px
 }
 
+.dropdown-menu {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+
 

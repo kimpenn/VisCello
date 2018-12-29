@@ -10,7 +10,7 @@ explorer_ui <- function(id) {
 
 #' @export
 explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, showcols_basic = NULL, showcols_advanced = NULL){
-    ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less")
+    ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less", cells = NULL, cell_source = NULL)
     # Reactive variable storing all basic plot parameters
     pvals <- reactiveValues()
 
@@ -35,16 +35,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                        conditionalPanel("input.proj_type == 'PCA-2D'",
                                         ns = ns,
                                         fluidRow(
-                                            column(6, selectInput(ns("pca2d_v1"), NULL, choices = paste0("PC",1:8), selected = "PC1")),
-                                            column(6, selectInput(ns("pca2d_v2"), NULL, choices = paste0("PC",1:8), selected = "PC2"))
+                                            column(6, selectInput(ns("pca2d_v1"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC1")),
+                                            column(6, selectInput(ns("pca2d_v2"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC2"))
                                         )
                        ),
                        conditionalPanel("input.proj_type == 'PCA-3D'",
                                         ns = ns,
                                         fluidRow(
-                                            column(4, selectInput(ns("pca3d_v1"), NULL, choices = paste0("PC",1:8), selected = "PC1")),
-                                            column(4, selectInput(ns("pca3d_v2"), NULL, choices = paste0("PC",1:8), selected = "PC2")),
-                                            column(4, selectInput(ns("pca3d_v3"), NULL, choices = paste0("PC",1:8), selected = "PC3"))
+                                            column(4, selectInput(ns("pca3d_v1"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC1")),
+                                            column(4, selectInput(ns("pca3d_v2"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC2")),
+                                            column(4, selectInput(ns("pca3d_v3"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC3"))
                                         )
                        ),
                        uiOutput(ns("plot_scalecolor_ui")),
@@ -63,24 +63,22 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                   title = "Reset plot configuration",
                                   options = list(container = "body")
                               ),
-                              uiOutput(ns("plot_configure_ui"))
+                              uiOutput(ns("plot_configure_ui")),
+                              dropdownButton2(inputId=ns("plot_download"),
+                                              fluidRow(
+                                                  column(6, numericInput(ns("down_ploth"), "Height", min=1, value = 7, step=1)),
+                                                  column(6, numericInput(ns("down_plotw"), "Width", min=1, value = 7, step=1))
+                                              ),
+                                              fluidRow(
+                                                  column(6, uiOutput(ns("explore_plotf_ui"))),
+                                                  column(6, tags$br(), downloadButton(ns("download_explore_plot"), "Download", class = "btn-primary", style="width: 115px"))
+                                              ),
+                                              circle = T, label ="Download Plot", tooltip=T, right = T,
+                                              icon = icon("download"), size = "xs", status="success", class = "btn_rightAlign")
+                              
                        )
                    ),
-                   uiOutput(ns("plot_ui")) %>% withSpinner(),
-                   # fluidRow(
-                   #     column(8),
-                   #     column(4,
-                   #            materialSwitch2(inputId = ns("interactive_2dplot"), tags$b("interactive"), value = F, status = "success")
-                   #     )
-                   # ),
-                   wellPanel(
-                       fluidRow(
-                           column(3, uiOutput(ns("explore_plotf_ui"))),
-                           column(3, numericInput(ns("ploth"), "Plot Height", min=1, value = 7, step=1)),
-                           column(3, numericInput(ns("plotw"), "Width [download]", min=1, value = 7, step=1)),
-                           column(3, tags$br(), downloadButton(ns("download_explore_plot"), "Download", class = "btn-primary", style="width: 115px"))
-                       )
-                   )
+                   uiOutput(ns("plot_ui")) %>% withSpinner()
             )
         )
     })
@@ -160,6 +158,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                             column(6, sel),
                             column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none")))
                         ),
+                        numericInput(ns("show_ploth"), "Height (adjust width by resize window)", min=1, value = 7, step=1),
                         numericInput(ns("alpha_level"), "Transparency (for cells not selected)", min = 0, max = 1, value = 0.01, step = 0.01),
                         circle = T, label ="Configure Plot", tooltip=T, right = T,
                         icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
@@ -184,23 +183,18 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         ns <- session$ns
         req(input$proj_type)
         if(!grepl("3D", input$proj_type, ignore.case = T)) {
-            # if(input$interactive_2dplot) {
-            #     req(pp1_ly())
-            #     plotlyOutput(ns("plotly2d"), height = paste0(500/5.5 *input$ploth,"px")) #%>% withSpinner()
-            # } else {
-                req(pp1())
+            req(pp1())
             tagList(
-                plotOutput(ns("plot2d"), height = paste0(500/5.5 *input$ploth,"px"), 
+                plotOutput(ns("plot2d"), height = paste0(500/5.5 *input$show_ploth,"px"), 
                            brush = brushOpts(
                                id = ns("plot2d_brush")
                            ),
                            hover = hoverOpts(id = ns("plot2d_hover"), delay = 50)), #%>% withSpinner()
                 uiOutput(ns("plot2d_tooltip"))
             )
-            #}
         } else {
             req(pp1_3d())
-            plotlyOutput(ns("plotly3d"), height = paste0(500/5.5 *input$ploth,"px"), width = "100%") #%>% withSpinner()
+            plotlyOutput(ns("plotly3d"), height = paste0(500/5.5 *input$show_ploth,"px"), width = "100%") #%>% withSpinner()
         }
     })
     
@@ -240,7 +234,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                 factors <- as.character(levels(factor(ev$meta[[input$proj_colorBy]])))
                 names(factors) <- factors
                 return(
-                    selectInput(ns("factor_compo"), "Choose cells belongs to:", choices = factors, multiple = T)
+                    selectInput(ns("factor_compo"), "Choose Cells:", choices = factors, multiple = T)
                 )
             } else if(input$proj_colorBy != "Gene Expression") {
                 num_range <- range(ev$meta[[input$proj_colorBy]])
@@ -418,10 +412,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                     }
                 }
                 if(!is.null(input$cell_expr_gene)) {
-                    if(input$cell_expr_gene!="nulv") {
-                        if(length(gene_values)) { # Fix
-                            proj$alpha <- ifelse(rowSums(gene_values > 0) == ncol(gene_values), "f", "t")
-                        }
+                    if(input$cell_expr_gene!="nulv") { # fix
+                        proj$alpha <- ifelse(rowSums(gene_values > 0) == ncol(gene_values), "f", "t")
                     }
                 }
             } else {
@@ -621,7 +613,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             paste('Plot-', Sys.Date(), fn_ext, sep='')
         },
         content = function(con, format = input$plotf) {
-            req(input$plotw, input$ploth, format)
+            req(input$down_plotw, input$down_ploth, format)
             fn_dev<-switch(format,
                            png = 'png',
                            tiff = 'tiff',
@@ -631,7 +623,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             )
             if(fn_dev!='html') {
                 req(pp1())
-                ggsave(con, plot = pp1(), device = fn_dev, width = input$plotw, height = input$ploth)
+                ggsave(con, plot = pp1(), device = fn_dev, width = input$down_plotw, height = input$down_ploth)
                 shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
                 if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
             } else {
@@ -673,7 +665,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         ns <- session$ns
         tagList(
             fluidRow(
-                column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells"), choices = list(
+                column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells selected by", ev$cell_source), choices = list(
                     "Name selected cell subset" = "addmeta",
                     "Compute new PCA/UMAP with selected cells" = "compdimr",
                     "Download expression data (Monocle cds format) of selected cells" = "downcell",
@@ -745,34 +737,38 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     })
 
      observe({
-         #req(!is.null(input$interactive_2dplot))
-         #if(!input$interactive_2dplot) {
-             if(!is.null(input$plot2d_brush)) {
-                 area_selected<-input$plot2d_brush
-                 plot_cols <- which(colnames(pvals$proj) %in% pvals$plot_col)
-                 ev$cells <- rownames(ev$meta)[which(pvals$proj[[plot_cols[1]]] >= area_selected$xmin & pvals$proj[[plot_cols[1]]] <= area_selected$xmax & 
-                           pvals$proj[[plot_cols[2]]] >= area_selected$ymin & pvals$proj[[plot_cols[2]]] <= area_selected$ymax)]
-             } else {
-                 req(input$proj_colorBy)
-                 if(input$proj_colorBy %in% ev$factor_cols & !is.null(input$factor_compo)) {
-                     ev$cells <- rownames(ev$meta)[ev$meta[[input$proj_colorBy]] %in% input$factor_compo]
-                 } else if(input$proj_colorBy != "Gene Expression" & !is.null(input$numeric_range)) {
-                     filter_std <- ev$meta[[input$proj_colorBy]] >= input$numeric_range[1] & ev$meta[[input$proj_colorBy]] <= input$numeric_range[2]
-                     ev$cells <- rownames(ev$meta)[filter_std]
-                 } else if(input$proj_colorBy == "Gene Expression") {
-                     req(pvals$gene_values, input$cell_expr_gene)
-                     if(input$cell_expr_gene!="nulv") {
-                         ev$cells <- names(which(rowSums(pvals$gene_values > 0) == ncol(pvals$gene_values)))
-                     } else {
-                         ev$cells <- NULL
-                     }
+         req(input$plot2d_brush)
+         isolate({
+             area_selected<-input$plot2d_brush
+             plot_cols <- which(colnames(pvals$proj) %in% pvals$plot_col)
+             ev$cells <- rownames(ev$meta)[which(pvals$proj[[plot_cols[1]]] >= area_selected$xmin & pvals$proj[[plot_cols[1]]] <= area_selected$xmax & 
+                                                     pvals$proj[[plot_cols[2]]] >= area_selected$ymin & pvals$proj[[plot_cols[2]]] <= area_selected$ymax)]
+             ev$cell_source <- "plot select"
+         })
+     })
+     
+     observe({
+         req(input$proj_colorBy)
+         input$factor_compo
+         input$numeric_range
+         input$cell_expr_gene
+         
+         isolate({
+             if(input$proj_colorBy %in% ev$factor_cols & !is.null(input$factor_compo)) {
+                 ev$cells <- rownames(ev$meta)[ev$meta[[input$proj_colorBy]] %in% input$factor_compo]
+             } else if(input$proj_colorBy != "Gene Expression" & !is.null(input$numeric_range)) {
+                 filter_std <- ev$meta[[input$proj_colorBy]] >= input$numeric_range[1] & ev$meta[[input$proj_colorBy]] <= input$numeric_range[2]
+                 ev$cells <- rownames(ev$meta)[filter_std]
+             } else if(input$proj_colorBy == "Gene Expression") {
+                 req(pvals$gene_values, input$cell_expr_gene)
+                 if(input$cell_expr_gene!="nulv") {
+                     ev$cells <- names(which(rowSums(pvals$gene_values > 0) == ncol(pvals$gene_values)))
+                 } else {
+                     ev$cells <- NULL
                  }
              }
-         # } else {
-         #    req(event()$key)
-         #    ev$cells <- unlist(event()$key)
-         # }
-
+             ev$cell_source <- input$proj_colorBy  
+         })
      })
 
     # Add by interactive mode

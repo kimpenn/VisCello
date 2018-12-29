@@ -40,6 +40,6 @@ lin16_color["ABpra"] <- "#0a961a"
 lin16_color["MSa"] <- "#E62F27"
 lin16_color["MSp"] <- "#F16667"
 
-
+max_pc_show <- 10
 
 
