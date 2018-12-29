@@ -1,3 +1,6 @@
+
+
+
 #' @export
 numericInput_1 <- function (inputId, label, value, min = NA, max = NA, step = NA, width = NULL)
 {
@@ -350,6 +353,5 @@ modalTriggerButton = function(inputId, target, label, icon = NULL, type = "butto
         tags$a(id = inputId, href = "#", class = class, 'data-toggle' = "modal", 'data-target' = target,
                     buttonContent)
     }
-
 }
 

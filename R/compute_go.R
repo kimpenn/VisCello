@@ -6,12 +6,15 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
     if(organism == "cel") {
         orgdb <- "celegans.db"
         fromType = "SYMBOL"
+        idcol <- "gene_name"
     } else if(organism =="mmu") {
         orgdb <- "org.Mm.eg.db"
         fromType = "ENSEMBL"
+        idcol <- "gene_id"
     } else if(organism == "hsa") {
         orgdb <- "org.Hs.eg.db"
         fromType = "ENSEMBL"
+        idcol <- "gene_id"
     }
 
     bg.df <- bitr(bg_list, fromType = fromType,
@@ -21,7 +24,7 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
     gene_list <- lapply(1:length(de_list), function(i){
         if(nrow(de_list[[i]]) == 0) return(NULL)
         tbl<-de_list[[i]]
-        gene.df <- bitr(de_list[[i]][,1], fromType = fromType,
+        gene.df <- bitr(de_list[[i]][[idcol]], fromType = fromType,
                         toType = c("SYMBOL", "ENTREZID"),
                         OrgDb = orgdb)
         merge(x = tbl, gene.df, by.x = "gene_name", by.y = "SYMBOL")
@@ -32,7 +35,7 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
         kegg_list <-   lapply(1:length(gene_list), function(i){
             if(is.null(gene_list[[i]])) return(NULL)
             if(organism == "cel") {
-                kegg_gene <- paste0("CELE_", toupper(gene_list[[i]]$gene_id))
+                kegg_gene <- paste0("CELE_", toupper(gene_list[[i]]$gene_name))
                 kegg_bg <- paste0("CELE_", toupper(bg.df$SYMBOL))
             }  else if(organism %in% c("mmu", "hsa")) {
                 kegg_gene <- gene_list[[i]]$ENTREZID

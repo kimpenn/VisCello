@@ -1,4 +1,7 @@
 
+
+.SidebarControl { max-width: 330px; }
+
 .btn_rightAlign{
     float:right;
     margin: 6px;

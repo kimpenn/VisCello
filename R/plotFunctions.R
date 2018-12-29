@@ -1,8 +1,12 @@
 
-
+#' @export
+factor_color_opt <- function() {
+    allowed_pals <- c("Set1", "Set2", "Paired", "Dark2", "Accent")
+    return(allowed_pals)
+}
 
 #' @export
-get_color_vector <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
+get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
 {
     unq <- unique(labels)
     hmcol <- RColorBrewer::brewer.pal(maxCol, pal)
@@ -21,7 +25,46 @@ get_color_vector <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
 }
 
 #' @export
-get_numeric_color <- function(palette) {
+numeric_bin_color_opt <- function() {
+    allowed_pals <- c('gg_color_hue', 'rainbow', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno')
+    return(allowed_pals)
+}
+
+#' @export
+gg_color_hue2 <- function(n) {
+    hues = seq(15, 375, length = n + 1)
+    hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+#' @export
+get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
+{
+    allowed_pals <- numeric_bin_color_opt()
+    if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
+    
+    unq <- unique(bins)
+    if(palette %in% get_brewer_set(c("sequential", "diverging"))) {
+        colorRampPalette(rev(RColorBrewer::brewer.pal(maxCol, palette)))(length(unq))
+    } else if(palette %in% list("viridis" = "viridis", "magma" = "magma", "plasma" = "plasma", "inferno" = "inferno")) {
+        viridis(n = length(unq), option = palette)
+    } else if(palette == "rainbow") {
+        colorRampPalette(rev(rainbow(10)))(length(unq))
+    } else if(palette == "gg_color_hue") {
+        gg_color_hue2(length(unq))
+    }
+}
+
+#' @export
+numeric_color_opt <- function() {
+    allowed_pals <- c('rainbow2', 'rainbow', 'RdOgYl', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno', 'grey&red')
+    return(allowed_pals)
+}
+
+#' @export
+get_numeric_color <- function(palette = NULL) {
+    if(is.null(palette)) stop("please specify a palette")
+    allowed_pals <- numeric_color_opt()
+    if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
     if(palette %in% get_brewer_set(c("sequential", "diverging"))) {
         colorRampPalette(rev(RColorBrewer::brewer.pal(9,palette)))(100)
     } else if(palette %in% list("viridis" = "viridis", "magma" = "magma", "plasma" = "plasma", "inferno" = "inferno")) {
@@ -35,7 +78,9 @@ get_numeric_color <- function(palette) {
     } else if(palette == "rainbow2") {
         c("#CCCCCCCC",rainbow(500)[50:500])
     } else if(palette == "grey&red") {
-        colorRampPalette(c("grey", "red"))(100)
+        c("grey", "red")
+    } else if(palette == "RdOgYl") {
+        c("grey85", "red", "orange", "yellow")
     }
 }
 
@@ -136,46 +181,46 @@ visualize_gene_counts <- function (gbm, projection, limits = c(0, 4), marker_siz
 
 #' @export
 visualize_gene_expression <- function (gene_values, gene_probes, projection, limits = c(0, 10), marker_size = 0.1,
-                                       title = NULL, ncol = NULL, title_size = 10, alpha=NULL, alpha_manual=NULL, binary = F, pal="rainbow2", na_col = "lightgrey")
+                                       title = NULL, ncol = NULL, title_size = 10, alpha=NULL, alpha_manual=NULL, binary = F, pal="rainbow2", na_col = "lightgrey", legend_name = "Expression")
 {
     gene_values[gene_values < limits[1]] <- limits[1]
     gene_values[gene_values > limits[2]] <- limits[2]
     colnames(gene_values) <- gene_probes
     projection_names <- colnames(projection)
-    colnames(projection) <- c("Component.1", "Component.2")
+    #colnames(projection) <- c("Component.1", "Component.2")
     if(!binary) {
         proj_gene <- data.frame(cbind(projection[c(1,2)], gene_values))
-        proj_gene_melt <- melt(proj_gene, id.vars = c("Component.1",
-                                                      "Component.2"))
+        proj_gene_melt <- melt(proj_gene, id.vars = colnames(projection))
         idx_region <- which(proj_gene_melt$value > 0)
         use_color <- get_numeric_color(pal)
         proj_gene_melt$alpha <- rep(alpha, length(gene_probes))
         #assign("proj_gene_melt", proj_gene_melt, env=.GlobalEnv)
-        p <- ggplot(proj_gene_melt, aes_string(x="Component.1", y="Component.2", alpha="alpha")) +
+        p <- ggplot(proj_gene_melt, aes_string(x=colnames(projection)[1], y=colnames(projection)[2], alpha="alpha")) +
             geom_point(size=marker_size,color=na_col,show.legend=FALSE, stroke=0) +
-            geom_point(data=proj_gene_melt[idx_region,], aes_string(x="Component.1", y="Component.2", colour = "value"), size = marker_size, stroke=0)+
+            geom_point(data=proj_gene_melt[idx_region,], aes_string(x=colnames(projection)[1], y=colnames(projection)[2], colour = "value"), size = marker_size, stroke=0)+
             scale_alpha_manual(values=alpha_manual) +
             guides(alpha=F)
 
-        p <- p+facet_wrap(~variable, ncol=ncol) +
+        p <- p +
+            #facet_wrap(~variable, ncol=ncol) +
             scale_color_gradientn(colours = use_color) +
             labs(x = projection_names[1], y = projection_names[2])
         if (!is.null(title)) {
             p <- p + ggtitle(title)
         }
-        p <- p + theme_bw() + theme(plot.title = element_text(hjust = 0.5), strip.text = element_text(size=title_size),
+        p <- p + 
+            guides(colour = guide_colorbar(title = legend_name)) +
+            theme_bw() + theme(plot.title = element_text(hjust = 0.5), strip.text = element_text(size=title_size),
                                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
     } else {
-        gene_values <- data.frame(gene_values, expr_stats=as.character(apply(gene_values, 1, function(x){
-            expr_idx <- which(x > 0)
-            if(length(expr_idx) == length(gene_probes)){
-                paste(gene_probes, collapse = ", ")
-            } else if(length(expr_idx)){
-                gene_probes[which(x==max(x))][1]
-            } else{
-                "Not Expressed"
-            }
-        })))
+        if(ncol(gene_values) > 2) return()
+        gene_values <- gene_values > 0
+        gene_values <- data.frame(
+            expr_stats = apply(gene_values, 1, function(x){
+                x_max <-max(x)
+                if(x_max == 0) return("Not Expressed") else paste0(gene_probes[which(x == x_max)], collapse = ", ")
+            })
+        )
 
         unique_vals <- as.character(unique(gene_values$expr_stats[which(gene_values$expr_stats != "Not Expressed")]))
         lev = c(paste(gene_probes, collapse = ", "), gene_probes, "Not Expressed")
@@ -188,7 +233,7 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
 
         proj_gene <- data.frame(cbind(projection, gene_values))
         proj_gene$alpha <- alpha
-        p = ggplot(proj_gene,  aes_string(x="Component.1", y="Component.2", alpha="alpha", color = "expr_stats")) +
+        p = ggplot(proj_gene,  aes_string(x=colnames(projection)[1], y=colnames(projection)[2], alpha="alpha", color = "expr_stats")) +
             geom_point(size = marker_size+1, stroke=0) +
             scale_color_manual(values = use_color)
 
@@ -235,22 +280,15 @@ visualize_expression_plotly <- function(expr, projection, ds, gene_probes, limit
                 plotly::add_markers()%>%
                 layout(legend = list(orientation = 'h'))
         } else {
-            if(length(gene_probes) > 5) {
-                showNotification("Do not support more than 5 genes.", type="error", duration=10)
-            }
-            gene_values <- data.frame(gene_values, expr_stats=as.character(apply(gene_values, 1, function(x){
-                expr_idx <- which(x > 0)
-                if(length(expr_idx) == length(gene_probes)){
-                    paste(gene_probes, collapse = ", ")
-                } else if(length(expr_idx)){
-                    gene_probes[which(x==max(x))][1]
-                } else{
-                    "Not Expressed"
-                }
-            })))
-            unique_vals <- as.character(unique(gene_values$expr_stats[which(gene_values$expr_stats != "Not Expressed")]))
+            if(ncol(gene_values) > 2) return()
+            gene_values <- gene_values > 0
+            gene_values <- data.frame(
+                expr_stats = apply(gene_values, 1, function(x){
+                    x_max <-max(x)
+                    if(x_max == 0) return("Not Expressed") else paste0(gene_probes[which(x == x_max)], collapse = ", ")
+                })
+            )
             lev = c(paste(gene_probes, collapse = ", "), gene_probes, "Not Expressed")
-
             gene_values$expr_stats <- factor(gene_values$expr_stats, levels = lev)
 
             colors = c("firebrick", "dodgerblue3", "forestgreen", "orchid4", "#FF7F00", "gold", "#FFFF33", "#F781BF")
@@ -298,45 +336,10 @@ gg.overlay <- function(df) {  # produces 2 color channels and the overlay
     grid.arrange(gg.z1, gg.z2, gg, ncol=3)
 }
 
-# Allow customization of # cols
-#' @export
-visualize_gene_mixture <- function (gbm, gene_probes, projection, limits = c(0, 10), marker_size = 0.1,
-                                    title = NULL, ncol = NULL, colorset = "Set1", alpha=0.8)
-{
-    gbm_trunc <- trunc_gbm_by_genes(gbm, gene_probes)
-    gene_values <- t(as.matrix(Biobase::exprs(gbm_trunc)))
-    gene_values[gene_values < limits[1]] <- limits[1]
-    gene_values[gene_values > limits[2]] <- limits[2]
-    colnames(gene_values) <- gene_probes
-    projection_names <- colnames(projection)
-    colnames(projection) <- c("Component.1", "Component.2")
-    col_scale <- apply(gene_values,2, function(x){(x - min(x)) / (max(x) - min(x))})
-    proj_gene <- data.frame(cbind(projection, col_scale))
-    proj_gene$alpha <- ifelse(rowSums(col_scale) == 0, alpha, 1)
-    if(length(gene_probes) == 1) {
-        p <- ggplot(proj_gene, aes(Component.1, Component.2, alpha = alpha)) +
-            geom_point(color = rgb(red=col_scale[,1],green=0,blue=0), size = marker_size)
-    } else if(length(gene_probes) == 2) {
-        p <- ggplot(proj_gene, aes(Component.1, Component.2, alpha = alpha)) +
-            geom_point(color = rgb(red=col_scale[,1],green=col_scale[,2],blue=0), size = marker_size)
-    } else if(length(gene_probes) == 3) {
-        p <- ggplot(proj_gene, aes(Component.1, Component.2, alpha = alpha)) +
-            geom_point(color = rgb(red=col_scale[,1],green=col_scale[,2],blue=col_scale[,3]), size = marker_size)
-    } else {
-        return(NULL)
-    }
 
-    if (!is.null(title)) {
-        p <- p + ggtitle(title)
-    }
-    p <- p + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
-                                panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-        guides(alpha=FALSE)
-    return(p)
-}
 
 #' @export
-plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotText=F, onplotTextSize = 2,  legend.size = 4, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0,...) {
+plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0,...) {
     plot_col <- colnames(proj)[dim_col]
     if(!is.null(alpha)) {
         proj$alpha <- alpha
@@ -351,15 +354,30 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         theme_bw() +
         ggtitle(plot_title) +
         theme(plot.title = element_text(hjust = 0.5), legend.position = legend.position)
-    if(onplotText) {
-        pp<- pp + geom_label(aes_string(
-            label = group.by
-            #color = group.by
-        ),
-        size = onplotTextSize,
-        nudge_x = nudge_x,
-        nudge_y = nudge_y,
-        data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median))
+    if(!is.null(onplotAnnot)) {
+        if(onplotAnnot == "text") {
+            pp<- pp + geom_text(
+                aes_string(
+                    label = group.by,
+                    color = group.by
+                ),
+                size = onplotAnnotSize,
+                nudge_x = nudge_x,
+                nudge_y = nudge_y,
+                data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+            )
+        } else {
+            pp<- pp + geom_label(
+                aes_string(
+                    label = group.by
+                    #color = group.by
+                ),
+                size = onplotAnnotSize,
+                nudge_x = nudge_x,
+                nudge_y = nudge_y,
+                data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+            )
+        }
     }
     if(legend) {
         pp <- pp + guides(alpha=F, color = guide_legend(override.aes = list(size=legend.size), title = legend.title, keywidth=keywidth, keyheight=keyheight, ncol = ncol))
@@ -371,7 +389,7 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
     } else {
         if(!is.null(pal)) {
             if(is.factor(proj[[group.by]]) || is.character(proj[[group.by]])) {
-                pp<-pp + scale_color_manual(values = get_color_vector(unique(na.omit(proj[[group.by]])), pal=pal, ...), na.value=na_col)
+                pp<-pp + scale_color_manual(values = get_factor_color(unique(na.omit(proj[[group.by]])), pal=pal, ...), na.value=na_col)
             } else {
                 pp<-pp +scale_colour_gradientn(colours=get_numeric_color(pal), trans=trans) + guides(color = guide_colorbar(barwidth = 10, barheight = 1))
             }
@@ -407,7 +425,7 @@ feature_plot <- function(df, selected_gene, plot_by = "sample", meta = NULL, pal
             g1 <- g1 + geom_violin(aes_string(fill = plot_by, alpha = 0.2), trim = F)
         }
     }
-    col_man <- get_color_vector(unique(df[[plot_by]]), pal = palette)
+    col_man <- get_factor_color(unique(df[[plot_by]]), pal = palette)
     names(col_man) <- unique(df[[plot_by]])
     g1 <- g1 + scale_color_manual(values = col_man) +
         scale_fill_manual(values = col_man) +

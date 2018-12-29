@@ -8,7 +8,9 @@ Description: A visualization tool for C.elegans scRNA-Seq data. Also applicable 
 Depends:
     R (>= 3.1.0),
     shiny,
+    shinydashboard,
     shinyBS,
+    shinycssloaders,
     devtools,
     shinyWidgets,
     htmlwidgets,

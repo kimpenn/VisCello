@@ -84,32 +84,8 @@ function(request) {
                         column(3, textInputCode("ct_marker", "Search Gene:", placeholder = "gene name"))
                     ),
                     DT::dataTableOutput("ct_marker_tbl")
-                ),
-                tabPanel(tags$b("Expression Profile"),
-                         tags$br(),
-                         fluidRow(
-                             column(3, selectInput("ge_type_choice", "Choose Profile", choices = list("Tissue Type" = "tissue", "Cell Type" = "celltype", "Early Lineage" = "lineage"))),
-                             column(3, selectInput("ge_data_scale", "Data Scale", choices = list("Log10 scaled" = "Log10 scaled", "Log10" = "Log10", "Count" = "Count"))),
-                             column(3, selectInput("ge_order_by", "Order By", choices = list("Fano Factor" = "Fano Factor", "Variance" = "Variance", "Expression Level" = "Expression Level"))),
-                             column(3, numericInput("ge_plot_num", "Include Gene#", value = 300, step=1, min=2))
-                         ),
-                         DT::dataTableOutput("gep_tbl"),
-                         fluidRow(
-                             column(7),
-                             column(3,
-                                    selectInput("ge_download_tbl_type", NULL, choices = list("Download this table (filtered)" = "cur", "Download  entire table" = "all"))
-                             ),
-                             column(2, downloadButton('download_ge_tbl', 'Download',class = "btn_rightAlign"))
-                         ),
-                         hr(),
-                         #uiOutput("ge_hmap_ui"),
-                         plotOutput("ge_hmap", height="600px"),
-                         fluidRow(
-                             column(6),
-                             #column(6, materialSwitch(inputId = "interactive_ge_hmap", tags$b("interactive"), value = F, status = "success")),
-                             column(6, downloadButton("download_ge_hmap", "Download Heatmap", class = "btn_rightAlign"))
-                         )
                 )
+                #uiOutput("expr_profile_ui"),
             ),
             tags$br(),
             tags$br(),
@@ -144,75 +120,7 @@ function(request) {
         )
     ),
     tabPanel(
-        "Differential Expression",
-        wellPanel(
-            fluidRow(
-                column(3, uiOutput("de_sample_ui")),
-                column(3, uiOutput("de_metaclass_ui")),
-                uiOutput("de_g1_ui"),
-                uiOutput("de_g2_ui")
-            ),
-            fluidRow(
-                column(8, uiOutput("cur_de_group")),
-                column(4,
-                       actionButton("run_de", "Run DE", class = "btn-info btn_rightAlign"),
-                       uiOutput("add_clus_ui"),
-                       uiOutput("downsample_de_ui")
-                )
-            )
-        ),
-        fluidRow(
-            column(5,
-                   fluidRow(
-                       column(8, uiOutput("de_proj_type_ui")),
-                       column(4,
-                              circleButton("de_plot_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
-                              shinyBS::bsTooltip(
-                                  "de_plot_config_reset",
-                                  title = "Reset plot configuration",
-                                  options = list(container = "body")
-                              ),
-                              uiOutput("de_plot_configure_ui")
-                       )
-                   ),
-                   uiOutput("de_plot2d_ui"),
-                   materialSwitch(inputId = "interactive_de_plot", tags$b("interactive"), value = F, status = "success"),
-                   tags$br(),
-                   DT::dataTableOutput("deg_summary")
-            ),
-            column(7,
-                   fluidRow(
-                       column(12,
-                              circleButton("hmap_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
-                              shinyBS::bsTooltip(
-                                  "hmap_config_reset",
-                                  title = "Reset heatmap configuration",
-                                  options = list(container = "body")
-                              ),
-                              uiOutput("hmap_configure_ui")
-                        )
-                   ),
-                   uiOutput("de_hmap_ui"),
-                   fluidRow(
-                       column(6, materialSwitch(inputId = "interactive_hmap", tags$b("interactive"), value = F, status = "success")),
-                       column(6, uiOutput("download_hmap_ui"))
-                   )
-            )
-        ),
-        tags$hr(),
-        fluidRow(
-            column(12,
-                   uiOutput("deg_tabs"),
-                  uiOutput("download_de_res_ui")
-            )
-        ),
-        tags$hr(),
-        fluidRow(
-            column(12,
-                   uiOutput("go_ui")
-            )
-        )
-
+        "Differential Expression"
     ),
 
     tabPanel(
