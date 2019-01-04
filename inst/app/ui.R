@@ -6,11 +6,11 @@
 #
 
 
-function(request) {
+function() {
     fluidPage(
         div(style="padding: 1px 0px; width: '100%'",
             titlePanel(
-                title="", windowTitle="CeVisualizer"
+                title="", windowTitle="VisCello: C.elegans Embryogenesis Visualizer"
             )
         ),
         navbarPage(
@@ -56,37 +56,19 @@ function(request) {
                                   });
                                   ")
             ),
-            tabsetPanel(
-                tabPanel(
-                    tags$b("Explorer"),
-                    explorer_ui("main")
-                ),
-                tabPanel(
-                    tags$b("Expression Plot"),
-                    tags$br(),
-                    fluidRow(
-                        column(3, selectizeInput("bp_gene", "Search Gene:", NULL)),
-                        column(3, uiOutput("bp_group_ui")),
-                        column(3, numericInput("bp_downsample", "Downsample #", min=2, max = 10000, value=100)),
-                        column(3, selectInput("bp_plot_type", "Plot Type", choices = list("Box plot" = "box", "Violin plot" = "violin", "Plot points" = "points")))
-                    ),
-                    uiOutput("bp_include_ui"),
-                    tags$hr(),
-                    plotOutput("bp_gene_plot")
-                ),
-                tabPanel(
-                    tags$b("Cell Type Marker"),
-                    tags$br(),
-                    fluidRow(
-                        column(3, textInputCode("ct_lineage", "Search Lineage:", placeholder = "lineage name substring")),
-                        column(3, textInputCode("ct_cell", "Search Cell:", placeholder = "cell name substring")),
-                        column(3, textInputCode("ct_tissue", "Search Tissue:", placeholder = "tissue cluster")),
-                        column(3, textInputCode("ct_marker", "Search Gene:", placeholder = "gene name"))
-                    ),
-                    DT::dataTableOutput("ct_marker_tbl")
-                )
-                #uiOutput("expr_profile_ui"),
-            ),
+            explorer_ui("main"),
+            
+            # tabPanel(
+            #     tags$b("Cell Type Marker"),
+            #     tags$br(),
+            #     fluidRow(
+            #         column(3, textInputCode("ct_lineage", "Search Lineage:", placeholder = "lineage name substring")),
+            #         column(3, textInputCode("ct_cell", "Search Cell:", placeholder = "cell name substring")),
+            #         column(3, textInputCode("ct_tissue", "Search Tissue:", placeholder = "tissue cluster")),
+            #         column(3, textInputCode("ct_marker", "Search Gene:", placeholder = "gene name"))
+            #     ),
+            #     DT::dataTableOutput("ct_marker_tbl")
+            # )
             tags$br(),
             tags$br(),
             tags$br(),

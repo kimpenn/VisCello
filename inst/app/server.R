@@ -133,7 +133,8 @@ function(input, output, session) {
                         #source = "main_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "main_dragselect")),
                         cmeta = cmeta,
                         showcols_basic = ctype_cols_basic,
-                        showcols_advanced = ctype_cols_advanced
+                        showcols_advanced = ctype_cols_advanced,
+                        onlyEUI = F
     )
 
     rval2 <- callModule(explorer_server, id="early",
@@ -142,12 +143,12 @@ function(input, output, session) {
                         #source = "early_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "early_dragselect")),
                         cmeta = cmeta,
                         showcols_basic = elin_cols_basic,
-                        showcols_advanced = elin_cols_advanced
+                        showcols_advanced = elin_cols_advanced,
+                        onlyEUI = T
     )
 
     # Update gene search box
     updateSelectizeInput(session, "dy_ctype_gene", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
-    updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
 
     observe({
         req(rval1$mclass)
@@ -156,7 +157,7 @@ function(input, output, session) {
         isolate({
             if(!is.null(rval1$cells)) {
                 if(!rval1$mclass %in% colnames(cmeta$df)) {
-                    cmeta$df[, rval1$mclass] <- NA
+                    cmeta$df[, rval1$mclass] <- "unannotated"
                 }
                 cmeta$df[[rval1$mclass]][match(rval1$cells, rownames(cmeta$df))] <- rep(rval1$group_name, length(rval1$cells))
             } else {
@@ -179,7 +180,7 @@ function(input, output, session) {
         isolate({
             if(!is.null(rval2$cells)) {
                 if(!rval2$mclass %in% colnames(cmeta$df)) {
-                    cmeta$df[, rval2$mclass] <- NA
+                    cmeta$df[, rval2$mclass] <- "unannotated"
                 }
                 cmeta$df[[rval2$mclass]][match(rval2$cells, rownames(cmeta$df))] <- rep(rval2$group_name, length(rval2$cells))
             } else {
@@ -194,37 +195,8 @@ function(input, output, session) {
             usr$elist <- rval2$list
         })
     })
-
-
-    ##### Feature Plot Module #####
-    output$bp_group_ui <- renderUI({
-        bp_choices <- ctype_cols_basic[!ctype_cols_basic %in% "Gene Expression"]
-        selectInput("bp_group", "Choose Grouping:", choices = bp_choices)
-    })
-
-    output$bp_include_ui <- renderUI({
-        req(input$bp_group)
-        cur_group <- cmeta$df[[input$bp_group]]
-        # Downsample cells from each cell type
-        unique_group <- unique(cur_group[!is.na(cur_group) & cur_group != "NA"])
-        selectInput("bp_include", "Include:", choices = unique_group, selected=unique_group, multiple = T, width = '100%')
-    })
-
-    output$bp_gene_plot <- renderPlot({
-        req(input$bp_group,input$bp_include)
-        cur_group <- cmeta$df[[input$bp_group]]
-        # Downsample cells from each cell type
-        cur_idx <- unlist(lapply(input$bp_include, function(g) {
-            cidx <- which(cur_group==g)
-            sample(cidx, min(length(cidx),input$bp_downsample))
-        }))
-        cur_meta <- cmeta$df[cur_idx, input$bp_group, drop=F]
-        df <- as.data.frame(as.matrix(all_cds@auxOrderingData$normalize_expr_data[input$bp_gene, cur_idx]))
-        feature_plot(df, input$bp_gene, plot_by = input$bp_group, meta = cur_meta, palette = "Set1", style = input$bp_plot_type, log_scale = F, legend_pos = "top", textSize = 15, pointSize = 3)
-    })
-
-
-
+    
+   
     #################### Cell type marker table #################
     proxy = dataTableProxy('ct_marker_tbl')
 

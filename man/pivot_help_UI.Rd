@@ -5,7 +5,7 @@
 \title{PIVOT help modules, UI}
 \usage{
 pivot_help_UI(id, title, label = NULL, icn = "question-circle",
-  type = "button", tooltip = T)
+  type = "button", tooltip = T, style = NULL)
 }
 \description{
 PIVOT help modules, UI

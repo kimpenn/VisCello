@@ -37,6 +37,12 @@ gg_color_hue2 <- function(n) {
 }
 
 #' @export
+floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
+
+#' @export
+ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
+
+#' @export
 get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
 {
     allowed_pals <- numeric_bin_color_opt()
@@ -56,7 +62,7 @@ get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
 
 #' @export
 numeric_color_opt <- function() {
-    allowed_pals <- c('rainbow2', 'rainbow', 'RdOgYl', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno', 'grey&red')
+    allowed_pals <- c('rainbow2', 'rainbow', 'gg_color_hue', 'RdOgYl', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno', 'grey&red')
     return(allowed_pals)
 }
 
@@ -81,6 +87,8 @@ get_numeric_color <- function(palette = NULL) {
         c("grey", "red")
     } else if(palette == "RdOgYl") {
         c("grey85", "red", "orange", "yellow")
+    } else if(palette == "gg_color_hue") {
+        gg_color_hue2(10)
     }
 }
 
@@ -135,60 +143,17 @@ get_brewer_set <- function(palette = c("sequential", "diverging", "qualitative")
     return(return_palette)
 }
 
-# Change the default color scale by overriding the function
-#' @export
-visualize_umi_counts <- function (gbm, projection, limits = c(0, 10), marker_size = 0.1)
-{
-    gene_values <- log(colSums(as.matrix(Biobase::exprs(gbm))), base = 10)
-    gene_values[gene_values < limits[1]] <- limits[1]
-    gene_values[gene_values > limits[2]] <- limits[2]
-    projection_names <- colnames(projection)
-    #colnames(projection) <- c("Component.1", "Component.2")
-    proj_gene <- data.frame(cbind(projection, gene_values))
-    p <- ggplot(proj_gene, aes_string(projection_names[1], projection_names[2])) + geom_point(aes(colour = gene_values),
-                                                                                              size = marker_size) +
-        #scale_colour_gradient(low = "blue", high = "red", name = "log10") +
-        scale_color_gradientn(colours = rev(rainbow(5)), name = "log10") + # Changed to rainbow
-        labs(x = projection_names[1],
-             y = projection_names[2]) + ggtitle("Total number of UMIs") +
-        theme_bw() + theme(plot.title = element_text(hjust = 0.5),
-                           panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-    return(p)
-}
-
-
-# Change the default color scale by overriding the function
-#' @export
-visualize_gene_counts <- function (gbm, projection, limits = c(0, 4), marker_size = 0.1)
-{
-    gene_values <- log(colSums(as.matrix(Biobase::exprs(gbm)) > 0), base = 10)
-    gene_values[gene_values < limits[1]] <- limits[1]
-    gene_values[gene_values > limits[2]] <- limits[2]
-    projection_names <- colnames(projection)
-    #colnames(projection) <- c("Component.1", "Component.2")
-    proj_gene <- data.frame(cbind(projection, gene_values))
-    p <- ggplot(proj_gene, aes_string(projection_names[1], projection_names[2])) + geom_point(aes(colour = gene_values),
-                                                                                              size = marker_size) +
-        #scale_colour_gradient(low = "blue", high = "red", name = "log10") +
-        scale_color_gradientn(colours = rev(rainbow(5)), name = "log10") + # Changed to rainbow
-        labs(x = projection_names[1],
-             y = projection_names[2]) + ggtitle("Total number of Genes") +
-        theme_bw() + theme(plot.title = element_text(hjust = 0.5),
-                           panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-    return(p)
-}
-
 
 #' @export
 visualize_gene_expression <- function (gene_values, gene_probes, projection, limits = c(0, 10), marker_size = 0.1,
-                                       title = NULL, ncol = NULL, title_size = 10, alpha=NULL, alpha_manual=NULL, binary = F, pal="rainbow2", na_col = "lightgrey", legend_name = "Expression")
+                                       title = NULL, ncol = NULL, title_size = 10, alpha=NULL, alpha_manual=NULL, binary = F, pal="rainbow2", na.col = "lightgrey", legend = T, legend_name = "Expression")
 {
-    gene_values[gene_values < limits[1]] <- limits[1]
-    gene_values[gene_values > limits[2]] <- limits[2]
     colnames(gene_values) <- gene_probes
     projection_names <- colnames(projection)
     #colnames(projection) <- c("Component.1", "Component.2")
     if(!binary) {
+        gene_values[gene_values < limits[1]] <- limits[1]
+        gene_values[gene_values > limits[2]] <- limits[2]
         proj_gene <- data.frame(cbind(projection[c(1,2)], gene_values))
         proj_gene_melt <- melt(proj_gene, id.vars = colnames(projection))
         idx_region <- which(proj_gene_melt$value > 0)
@@ -196,7 +161,7 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
         proj_gene_melt$alpha <- rep(alpha, length(gene_probes))
         #assign("proj_gene_melt", proj_gene_melt, env=.GlobalEnv)
         p <- ggplot(proj_gene_melt, aes_string(x=colnames(projection)[1], y=colnames(projection)[2], alpha="alpha")) +
-            geom_point(size=marker_size,color=na_col,show.legend=FALSE, stroke=0) +
+            geom_point(size=marker_size,color=na.col,show.legend=FALSE, stroke=0) +
             geom_point(data=proj_gene_melt[idx_region,], aes_string(x=colnames(projection)[1], y=colnames(projection)[2], colour = "value"), size = marker_size, stroke=0)+
             scale_alpha_manual(values=alpha_manual) +
             guides(alpha=F)
@@ -208,10 +173,16 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
         if (!is.null(title)) {
             p <- p + ggtitle(title)
         }
-        p <- p + 
-            guides(colour = guide_colorbar(title = legend_name)) +
-            theme_bw() + theme(plot.title = element_text(hjust = 0.5), strip.text = element_text(size=title_size),
-                                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+        if(legend) {
+            p <- p + 
+                guides(colour = guide_colorbar(title = legend_name))
+        }
+        p <- p + theme_bw() + 
+            theme(legend.position = c("top"), 
+                  plot.title = element_text(hjust = 0.5), 
+                  strip.text = element_text(size=title_size), 
+                  panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank())
     } else {
         if(ncol(gene_values) > 2) return()
         gene_values <- gene_values > 0
@@ -223,27 +194,31 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
         )
 
         unique_vals <- as.character(unique(gene_values$expr_stats[which(gene_values$expr_stats != "Not Expressed")]))
-        lev = c(paste(gene_probes, collapse = ", "), gene_probes, "Not Expressed")
-
+        lev = unique(c(paste(gene_probes, collapse = ", "), gene_probes, "Not Expressed"))
         gene_values$expr_stats <- factor(gene_values$expr_stats, levels = lev)
 
         colors = c("firebrick", "dodgerblue3", "forestgreen", "orchid4", "#FF7F00", "gold", "#FFFF33", "#F781BF")
-        use_color <- c(colors[1:(length(lev)-1)],na_col)
+        use_color <- c(colors[1:(length(lev)-1)],na.col)
         names(use_color) <- c(lev[1:(length(lev)-1)], "Not Expressed")
 
         proj_gene <- data.frame(cbind(projection, gene_values))
         proj_gene$alpha <- alpha
-        p = ggplot(proj_gene,  aes_string(x=colnames(projection)[1], y=colnames(projection)[2], alpha="alpha", color = "expr_stats")) +
-            geom_point(size = marker_size+1, stroke=0) +
+        idx_region <- which(proj_gene$expr_stats != "Not Expressed")
+        p = ggplot(proj_gene,  aes_string(x=colnames(projection)[1], y=colnames(projection)[2], alpha="alpha")) +
+            geom_point(size=marker_size,color=na.col,show.legend=FALSE, stroke=0) +
+            geom_point(data=proj_gene[idx_region,], aes_string(x=colnames(projection)[1], y=colnames(projection)[2], colour = "expr_stats"), size = marker_size, stroke=0)+
             scale_color_manual(values = use_color)
 
         p = p +
             scale_alpha_manual(values=alpha_manual) +
-            guides(color = guide_legend(title = "Expression:", override.aes = list(size = 4)),
-                   alpha = F) +
             monocle:::monocle_theme_opts() +
-            theme(
-                legend.position = c("top"))
+            theme(legend.position = c("top"))
+        if(legend) {
+            p <- p+ guides(color = guide_legend(title = "Expression:", override.aes = list(size = 4)),
+                                      alpha = F)
+        } else {
+            p <- p + guides(color = F, alpha = F)
+        }
     }
     return(p)
 }
@@ -261,16 +236,20 @@ visualize_expression_plotly <- function(expr, projection, ds, gene_probes, limit
             layout(legend = list(orientation = 'h'))
     } else {
         gene_values <- expr
-        gene_values[gene_values < limits[1]] <- limits[1]
-        gene_values[gene_values > limits[2]] <- limits[2]
         colnames(gene_values) <- gene_probes
+
         if(length(gene_probes) == 1) {
+            show_value <- round(gene_values[,1],3)
+            gene_values[gene_values < limits[1]] <- limits[1]
+            gene_values[gene_values > limits[2]] <- limits[2]
+            
             proj_gene <- data.frame(cbind(projection[,ds], gene_values))
             colnames(proj_gene) <- c(colnames(projection[,ds]), gene_probes)
+            proj_gene$show_value <- show_value
             rgb_scale_list<- numeric_rgb_range(col = get_numeric_color(pal), zgrey=T)
             plotly::plot_ly(proj_gene,
                             x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])), z=z_form,
-                            text=proj_gene[[gene_probes]],
+                            text=proj_gene$show_value,
                             hoverinfo="text",
                             source = source,
                             key = row.names(proj_gene),
@@ -339,7 +318,7 @@ gg.overlay <- function(df) {  # produces 2 color channels and the overlay
 
 
 #' @export
-plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0,...) {
+plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), ...) {
     plot_col <- colnames(proj)[dim_col]
     if(!is.null(alpha)) {
         proj$alpha <- alpha
@@ -347,7 +326,10 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         proj$alpha <- rep("f", length(nrow(proj)))
     }
     alpha_manual <- c("f"=1,"t"=alpha_level)
-
+    if(!is.null(limits)) {
+        proj[[group.by]][proj[[group.by]] < limits[1]] <- limits[1]
+        proj[[group.by]][proj[[group.by]] > limits[2]] <- limits[2]
+    }
     pp<-ggplot(proj, aes_string(plot_col[1],plot_col[2])) +
         geom_point(aes_string(color=group.by, alpha="alpha"), size=size, stroke = 0) +
         scale_alpha_manual(values=alpha_manual) +
@@ -380,18 +362,26 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         }
     }
     if(legend) {
-        pp <- pp + guides(alpha=F, color = guide_legend(override.aes = list(size=legend.size), title = legend.title, keywidth=keywidth, keyheight=keyheight, ncol = ncol))
+        pp <- pp + guides(alpha=F, color = guide_legend(override.aes = list(size=legend.size),
+                                                        title.theme = element_text(size = legend.text.size*1.2),
+                                                        label.theme = element_text(size = legend.text.size),
+                                                        title = legend.title, 
+                                                        keywidth=keywidth, 
+                                                        keyheight=keyheight, ncol = ncol))
     } else {
         pp <- pp + guides(alpha=F, color = F)
     }
     if(!is.null(names(pal))) {
-        pp<-pp + scale_color_manual(values = pal, na.value=na_col)
+        pp<-pp + scale_color_manual(values = pal, na.value=na.col, breaks = breaks)
     } else {
         if(!is.null(pal)) {
             if(is.factor(proj[[group.by]]) || is.character(proj[[group.by]])) {
-                pp<-pp + scale_color_manual(values = get_factor_color(unique(na.omit(proj[[group.by]])), pal=pal, ...), na.value=na_col)
+                pp<-pp + scale_color_manual(values = get_factor_color(unique(na.omit(proj[[group.by]])), pal=pal, ...), na.value=na.col, breaks = breaks)
             } else {
-                pp<-pp +scale_colour_gradientn(colours=get_numeric_color(pal), trans=trans) + guides(color = guide_colorbar(barwidth = 10, barheight = 1))
+                pp<-pp + scale_colour_gradientn(colours=get_numeric_color(pal), trans=trans)
+                if(legend) {
+                    pp<-pp + guides(color = guide_colorbar(barwidth = 10, barheight = 1))
+                }
             }
         }
     }
@@ -407,36 +397,58 @@ find_conditonal_idx <- function(idx, which_list) {
 
 
 #' @export
-feature_plot <- function(df, selected_gene, plot_by = "sample", meta = NULL, palette = "Set1", style = "box", log_scale = F, legend_pos = "top", textSize = 15, pointSize = 3){
+feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pal = "Set1", style = "box", log_scale = F, legend = T, legend.title = waiver(), legend.pos = "top", legend.point.size=4, text.size = 15, pointSize = 3, na.col = "lightgrey", breaks = waiver(),  axis.text.angle = 90, order.by = "none", ylab.label = "expression"){
     if(is.null(df) || nrow(df) == 0 || is.null(meta) || is.null(palette)) {
         return()
     }
     colnames(df) <- "expression_level"
     df <- cbind(df, meta)
-    g1 <- ggplot(df, aes_string(x=plot_by, y="expression_level"))
-    if(style == "bar") {
-        g1 <- ggplot(df, aes_string(x="sample", y="expression_level"))
-        g1 <- g1 + geom_bar(stat = "identity", aes_string(fill = plot_by))
-    } else if(style %in% c("points", "box", "violin")) {
-        g1 <- g1 + geom_point(position=position_jitter(w=0.1,h=0), size = pointSize, aes_string(colour = plot_by, group = plot_by))
-        if(style == "box") {
-            g1 <- g1 + geom_boxplot(aes_string(fill = plot_by, alpha = 0.2))
-        } else if(style == "violin") {
-            g1 <- g1 + geom_violin(aes_string(fill = plot_by, alpha = 0.2), trim = F)
-        }
+
+    if(order.by == "mean") {
+        group_mean <- df %>% dplyr::group_by_at(group.by) %>% dplyr::summarize(mean = mean(expression_level))
+        group_order <- group_mean[[group.by]][order(group_mean$mean, decreasing = T)]
+        df[[group.by]] <- factor(as.character(df[[group.by]]), levels = group_order, ordered=T)
     }
-    col_man <- get_factor_color(unique(df[[plot_by]]), pal = palette)
-    names(col_man) <- unique(df[[plot_by]])
-    g1 <- g1 + scale_color_manual(values = col_man) +
-        scale_fill_manual(values = col_man) +
-        ggtitle(paste0("Expression level of gene ", selected_gene))  +
-        theme(text = element_text(size=textSize), legend.position=legend_pos, plot.title = element_text(hjust = 0.5)) +
-        guides(alpha = F, fill=F)
+    
+    g1 <- ggplot(df, aes_string(x=group.by, y="expression_level"))
+    
+    g1 <- g1 + geom_point(position=position_jitter(w=0.1,h=0), size = pointSize, aes_string(colour = group.by, group = group.by))
+    if(style == "box") {
+        g1 <- g1 + geom_boxplot(aes_string(fill = group.by, alpha = 0.2))
+    } else if(style == "violin") {
+        g1 <- g1 + geom_violin(aes_string(fill = group.by, alpha = 0.2), trim = F)
+    }
+    
+    if(!is.null(names(pal))) {
+        g1<-g1 + 
+            scale_color_manual(values = pal, na.value=na.col, breaks = breaks) +
+            scale_fill_manual(values = pal, na.value=na.col, breaks = breaks)
+    } else {
+        if(!is.null(pal)) {
+            if(is.factor(df[[group.by]]) || is.character(df[[group.by]])) {
+                pals <- get_factor_color(unique(na.omit(df[[group.by]])), pal=pal)
+                g1<-g1 + 
+                    scale_color_manual(values = pals, na.value=na.col, breaks = breaks) + 
+                    scale_fill_manual(values = pals, na.value=na.col, breaks = breaks)
+            } 
+        }
+    } 
+    
+    g1 <- g1 + 
+        ggtitle(paste0("Expression level of gene ", selected_gene)) +
+        xlab(legend.title) +
+        ylab(ylab.label) + 
+        theme(text = element_text(size=text.size), axis.text.x = element_text(angle=axis.text.angle, hjust=1), legend.position=legend.pos, plot.title = element_text(hjust = 0.5)) 
+    if(legend) {
+        g1 <- g1 + guides(alpha = F, fill=F, color = guide_legend(override.aes = list(size=legend.point.size), title = legend.title))
+    } else {
+        g1 <- g1 + guides(alpha = F, fill=F, color= F)
+    }
     if(log_scale) {
         g1 <- g1 + scale_y_log10(breaks=c(25,100,400))
     }
 
-    return(g1 + theme_minimal())
+    return(g1 + monocle:::monocle_theme_opts())
 }
 
 #' @export

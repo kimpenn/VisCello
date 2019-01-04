@@ -271,7 +271,7 @@ modalActionButton <- function (inputId, label, icon = NULL, width = NULL, ...)
 #' PIVOT help modules, UI
 #'
 #' @export
-pivot_help_UI <- function(id, title, label = NULL, icn = "question-circle", type = "button", tooltip = T){
+pivot_help_UI <- function(id, title, label = NULL, icn = "question-circle", type = "button", tooltip = T, style = NULL){
     ns<- NS(id)
     if(tooltip) {
         tip <- shinyBS::bsTooltip(
@@ -283,9 +283,9 @@ pivot_help_UI <- function(id, title, label = NULL, icn = "question-circle", type
         tip <- NULL
     }
     if(type == "button") {
-        btn <-  actionButton(ns("pivot_help"), label = label, icon = icon(icn))
+        btn <-  actionButton(ns("pivot_help"), label = label, icon = icon(icn), style = style)
     } else {
-        btn <- actionLink(ns("pivot_help"), label = label, icon = icon(icn))
+        btn <- actionLink(ns("pivot_help"), label = label, icon = icon(icn), style = style)
     }
     tagList(
         btn,

@@ -3,35 +3,23 @@
 #' @export
 explorer_ui <- function(id) {
     ns <- NS(id)
-    tagList(
-        uiOutput(ns("eui")) %>% withSpinner(type = 6, size = 2)
-    )
+    uiOutput(ns("eui")) %>% withSpinner(type = 6, size = 2)
 }
 
 #' @export
-explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, showcols_basic = NULL, showcols_advanced = NULL){
+explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, showcols_basic = NULL, showcols_advanced = NULL, onlyEUI = T){
     ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less", cells = NULL, cell_source = NULL)
     # Reactive variable storing all basic plot parameters
     pvals <- reactiveValues()
-
-    observe({
-        factor_cols <- sapply(colnames(cmeta$df)[-1], function(x) {
-            ifelse(!is.numeric(cmeta$df[[x]]), x, NA)
-        })
-        ev$factor_cols <- c(factor_cols[!is.na(factor_cols)], "Cluster")
-        ev$meta_custom <- c(ev$factor_cols[!ev$factor_cols %in% showcols_advanced])
-    })
     
     output$eui <- renderUI({
         ns <- session$ns
-        fluidRow(
+        eui <- fluidRow(
             column(4,
                    wellPanel(
                        class = "SidebarControl",
                        uiOutput(ns("input_sample_ui")),
                        uiOutput(ns("proj_type_ui")),
-                       uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = NULL, multiple = T),
                        conditionalPanel("input.proj_type == 'PCA-2D'",
                                         ns = ns,
                                         fluidRow(
@@ -47,16 +35,17 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                             column(4, selectInput(ns("pca3d_v3"), NULL, choices = paste0("PC",1:max_pc_show), selected = "PC3"))
                                         )
                        ),
+                       uiOutput(ns("proj_colorBy_ui")),
+                       selectizeInput(ns("gene_list"), "Search Gene:", choices = NULL, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
-                       uiOutput(ns("g_limit_ui")),
-                       uiOutput(ns("data_highlight")),
-                       uiOutput(ns("selectCell_panel"))
-                   )
+                       uiOutput(ns("data_highlight"))
+                   ),
+                   uiOutput(ns("selectCell_panel"))
             ),
             column(8,
                    fluidRow(
-                       column(8),
-                       column(4,
+                       column(6),
+                       column(6,
                               circleButton(ns("plot_config_reset"), icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
                               shinyBS::bsTooltip(
                                   ns("plot_config_reset"),
@@ -74,31 +63,72 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                                   column(6, tags$br(), downloadButton(ns("download_explore_plot"), "Download", class = "btn-primary", style="width: 115px"))
                                               ),
                                               circle = T, label ="Download Plot", tooltip=T, right = T,
-                                              icon = icon("download"), size = "xs", status="success", class = "btn_rightAlign")
-                              
+                                              icon = icon("download"), size = "xs", status="success", class = "btn_rightAlign"),
+                              uiOutput(ns("g_limit_ui")),
+                              uiOutput(ns("v_limit_ui"))
                        )
                    ),
                    uiOutput(ns("plot_ui")) %>% withSpinner()
             )
         )
+        
+        
+        fui <- tagList(
+            wellPanel(
+                fluidRow(
+                    column(3, uiOutput(ns("bp_sample_ui"))),
+                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", NULL)),
+                    column(3, uiOutput(ns("bp_colorBy_ui"))),
+                    column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
+                ),
+                uiOutput(ns("bp_include_ui"))
+            ),
+            fluidRow(
+                column(6),
+                column(6, 
+                       circleButton(ns("bp_plot_config_reset"), icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                       shinyBS::bsTooltip(
+                           ns("bp_plot_config_reset"),
+                           title = "Reset plot configuration",
+                           options = list(container = "body")
+                       ),
+                       uiOutput(ns("bp_plot_configure_ui")),
+                       dropdownButton2(inputId=ns("bp_plot_download"),
+                                       fluidRow(
+                                           column(6, numericInput(ns("bp_down_ploth"), "Height", min=1, value = 5, step=1)),
+                                           column(6, numericInput(ns("bp_down_plotw"), "Width", min=1, value = 7, step=1))
+                                       ),
+                                       fluidRow(
+                                           column(6, selectInput(ns("bp_plotf"), "Format", choices =  list("png","pdf","eps","tiff"))),
+                                           column(6, tags$br(), downloadButton(ns("download_bp_plot"), "Download", class = "btn-primary", style="width: 115px"))
+                                       ),
+                                       circle = T, label ="Download Plot", tooltip=T, right = T,
+                                       icon = icon("download"), size = "xs", status="success", class = "btn_rightAlign")
+                      )
+            ),
+            uiOutput(ns("bp_gene_plot_ui")) 
+        )
+        
+        if(onlyEUI) {
+            return(eui)
+        } else {
+            tabsetPanel(
+                tabPanel(
+                    tags$b("Explorer"),
+                    eui
+                ),
+                tabPanel(
+                    tags$b("Expression by Cell Type"),
+                    fui
+                )
+            )
+        }
     })
-
+    
     output$input_sample_ui <- renderUI({
         ns <- session$ns
         sample_names <- names(ev$list)
-        tagList(
-            fluidRow(
-                column(9, tags$b("Choose Sample:")),
-                column(3, pivot_help_UI(ns("choose_sample_info"), title = NULL, label = NULL, icn="cog", type = "link", tooltip = F))
-                # column(3,
-                #        actionLink(ns("choose_sample_btn"), label = NULL, icon = icon("cog")),
-                #        shinyBS::bsModal(id = ns("choose_sample_modal"), "Visualization of cell subsets", ns("choose_sample_btn"), content)
-                # )
-            ),
-            fluidRow(
-                column(12, selectInput(ns("input_sample"), NULL, choices=sample_names))
-            )
-        )
+        selectInput(ns("input_sample"), tags$div("Choose Sample:", pivot_help_UI(ns("choose_sample_info"), title = NULL, label = NULL, icn="cog", type = "link", tooltip = F, style = "padding-left:10px;")), choices=sample_names)
     })
 
     output$proj_type_ui <- renderUI({
@@ -106,7 +136,10 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         req(ev$vis)
         options <- names(ev$vis@proj)
         if("PCA" %in% options) options <- c(options[!options == "PCA"], "PCA-2D", "PCA-3D")
-        selectInput(ns("proj_type"), "Choose Projection:", choices=options)
+        tagList(
+            selectInput(ns("proj_type"), "Choose Projection:", choices=options),
+            conditionalPanel("1==0", textInput(ns("proj_type_I"), NULL, value = ev$sample))
+        )
     })
 
     output$proj_colorBy_ui <- renderUI({
@@ -116,11 +149,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
 
     output$plot_scalecolor_ui <- renderUI({
         ns = session$ns
-        req(input$proj_colorBy)
-        if(input$proj_colorBy == 'Gene Expression') {
-            selectInput(ns("log_transform_gene"), "Data scale", choices=list("log2norm"="log2", "raw" = "raw"))
+        req(input$proj_colorBy, !input$proj_colorBy %in% c("moreop", "lessop"))
+        
+        if(input$proj_colorBy == 'gene.expr') {
+            selectInput(ns("log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw"))
         } else if(!input$proj_colorBy %in% ev$factor_cols){
-            selectInput(ns("log_transform"), "Data scale", choices=list("log10"="log10", "identity" = "identity"))
+            if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dscale)) {
+                default_scale <- pmeta_attr$dscale[which(pmeta_attr$meta_id==input$proj_colorBy)]
+            } 
+            if(is.na(default_scale)) default_scale <- NULL
+            selectInput(ns("log_transform_val"), "Data scale", choices=list("Log10"="log10", "Identity" = "identity"), selected = default_scale)
         } else {
             return()
         }
@@ -137,7 +175,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             default_pal <- NULL
         }
         
-        if(input$proj_colorBy == 'Gene Expression') {
+        if(input$proj_colorBy == 'gene.expr') {
             sel<-selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
         } else if(input$proj_colorBy %in% ev$factor_cols){
             if(grepl("time.bin", input$proj_colorBy)) {
@@ -151,29 +189,26 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         
         dropdownButton2(inputId=ns("plot_configure"),
                         fluidRow(
-                            column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, max = 5, value = 1, step = 0.1)),
-                            column(6, numericInput(ns("text_size"), "Text Size", min = 1, max = 5, value = 3, step = 0.1))
+                            column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
+                            column(6, numericInput(ns("text_size"), "Text Size", min = 1, value = 3, step = 1))
                         ),
                         fluidRow(
                             column(6, sel),
                             column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none")))
                         ),
-                        numericInput(ns("show_ploth"), "Height (adjust width by resize window)", min=1, value = 7, step=1),
-                        numericInput(ns("alpha_level"), "Transparency (for cells not selected)", min = 0, max = 1, value = 0.01, step = 0.01),
+                        fluidRow(
+                            column(6, numericInput(ns("show_ploth"), "Height (resize window for width)", min=1, value = 7, step=1)),
+                            column(6, numericInput(ns("alpha_level"), "Transparency (for cells not selected)", min = 0, max = 1, value = 0.01, step = 0.01))
+                        ),
                         circle = T, label ="Configure Plot", tooltip=T, right = T,
                         icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
     })
     
 
     observe({
-        req(input$proj_type, input$proj_colorBy)
+        req(ev$cells)
         isolate({
-            updateSelectInput(session, "numeric_pal", "Palette",selected=lapply(reactiveValuesToList(input), unclass)$numeric_pal )
-            updateSelectInput(session, "log_transform_gene", "Data scale", selected=lapply(reactiveValuesToList(input), unclass)$log_transform_gene )
-            updateSelectInput(session, "factor_pal", "Palette", selected=lapply(reactiveValuesToList(input), unclass)$factor_pal )
-            updateSelectInput(session, "legend_type", "Legend", selected=lapply(reactiveValuesToList(input), unclass)$legend_type )
-            updateSelectInput(session, "log_transform", "Data scale", selected=lapply(reactiveValuesToList(input), unclass)$log_transform)
-            #updateNumericInput(session, "g_limit", "Expr Cut", value = lapply(reactiveValuesToList(input), unclass)$g_limit)
+            updateSelectInput(session, "selectCell_goal", selected=lapply(reactiveValuesToList(input), unclass)$selectCell_goal)
         })
     })
     
@@ -206,9 +241,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         req(nrow(x) > 0)
         if(pvals$plot_class != "expression") {
             y <- as.character(x[[pvals$proj_colorBy]])
-            tip <- paste0("<b>", pvals$proj_colorBy, ": </b>", y, "<br/>")
+            tip <- paste0("<b>", pvals$legend_title, ": </b>", y, "<br/>")
         } else {
-            y <- round(pvals$gene_values[rownames(x),, drop=F],3)
+            y <- round(ev$gene_values[rownames(x),, drop=F],3)
             tip <- paste0(sapply(1:ncol(y), function(i) paste0("<b>", colnames(y)[i], ": </b>", y[[i]], "<br/>")), collapse = "")
         }
         req(length(y) > 0)
@@ -225,46 +260,48 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     
 
     output$data_highlight <- renderUI({
-        req(ev$vis, input$proj_colorBy, !grepl("3D", input$proj_type))
-        #req(!input$interactive_2dplot)
+        req(ev$vis, input$proj_colorBy, !grepl("3D", input$proj_type), !input$proj_colorBy %in% c("moreop", "lessop"))
+        #print(paste0("highlight:", input$proj_colorBy))
         input$gene_list
+        input$log_transform_val
+        
         ns <- session$ns
-        isolate({
-            if(input$proj_colorBy %in% ev$factor_cols) {
+        proj_colorBy_dh <- input$proj_colorBy # This is necessary!!! See explanation in the observer
+        ui1 <- NULL
+        if(input$proj_colorBy %in% ev$factor_cols) {
+            if(grepl("type", input$proj_colorBy, ignore.case = T)) {
+                factors <- names(which(table(ev$meta[[input$proj_colorBy]]) >= 10)) 
+            } else {
                 factors <- as.character(levels(factor(ev$meta[[input$proj_colorBy]])))
-                names(factors) <- factors
-                return(
-                    selectInput(ns("factor_compo"), "Choose Cells:", choices = factors, multiple = T)
-                )
-            } else if(input$proj_colorBy != "Gene Expression") {
-                num_range <- range(ev$meta[[input$proj_colorBy]])
-                return(
-                    sliderInput(ns("numeric_range"), label = "Select Range",
-                                min = num_range[1], max = num_range[2],
-                                value = num_range)
-                )
-            } else if(input$proj_colorBy == "Gene Expression"){
-                curg <- input$gene_list
-                if(length(curg)){
-                    options <- list(
-                        "Select cells that:" = "nulv"
-                    )
-                    if(length(curg) == 1) {
-                        curg_opt <- "1g"
-                        names(curg_opt) <- paste0("Express: ", curg)
-                    } else {
-                        curg_opt <- "mg"
-                        names(curg_opt) <- paste0("Co-Express: ", paste(curg, collapse = ", "))
-                    }
-                    options <- c(options, curg_opt)
-                    return(
-                        selectInput(ns("cell_expr_gene"), NULL, choices = options, multiple = F)
-                    )
-                }
-            }else {
-                return()
             }
-        })
+            names(factors) <- factors
+            ui1 <- selectInput(ns("factor_compo"), "Choose Cells:", choices = factors, multiple = T)
+        } else if(input$proj_colorBy != "gene.expr") {
+            num_range <- range(ev$value)
+            num_range[1] <- floor_dec(num_range[1],2)
+            num_range[2] <- ceiling_dec(num_range[2],2)
+            ui1 <- sliderInput(ns("numeric_range"), label = "Select Range", min = num_range[1], max = num_range[2], value = num_range)
+        } else if(input$proj_colorBy == "gene.expr"){
+            curg <- input$gene_list
+            if(length(curg)){
+                options <- list(
+                    "All cells" = "nulv"
+                )
+                if(length(curg) == 1) {
+                    curg_opt <- "1g"
+                    names(curg_opt) <- paste0("Express: ", curg)
+                } else {
+                    curg_opt <- "mg"
+                    names(curg_opt) <- paste0("Co-Express: ", paste(curg, collapse = ", "))
+                }
+                options <- c(options, curg_opt)
+                ui1 <- selectInput(ns("cell_expr_gene"), "Choose Cells:", choices = options, multiple = F)
+            }
+        }
+        return(tagList(
+            ui1,
+            conditionalPanel("1==0", ns = ns, textInput(ns("proj_colorBy_dh"), label = NULL, value = proj_colorBy_dh)) # This is necessary!!! See explanation in the observer
+        ))
     })
 
     observe({
@@ -280,8 +317,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             ev$vis <- ev$list[[sample]]
             idx <- ev$vis@idx
             cur_meta <- cmeta$df[ev$vis@idx,]
-            if(!is.null(ev$vis@pmeta)) cur_meta <- cbind(cur_meta, ev$vis@pmeta)
+            if(!is.null(ev$vis@pmeta) && nrow(ev$vis@pmeta) == nrow(cur_meta)) cur_meta <- cbind(cur_meta, ev$vis@pmeta)
             ev$meta <- cur_meta
+            ev$factor_cols <- sapply(colnames(ev$meta), function(x) {
+                ifelse(!is.numeric(ev$meta[[x]]), x, NA)
+            })
+            ev$meta_custom <- colnames(ev$meta)[!colnames(ev$meta) %in% showcols_advanced]
         })
     })
 
@@ -290,9 +331,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         isolate({
             if(!is.null(input$gene_list)){
                 if(ev$colorBy_state == "less") {
-                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "Less options..."="lessop"), selected = "Gene Expression")
+                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "Less options..."="lessop"), selected = "gene.expr")
                 } else {
-                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "More options..."="moreop"), selected = "Gene Expression")
+                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "More options..."="moreop"), selected = "gene.expr")
                 }
             }
         })
@@ -306,7 +347,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         } else if(input$proj_colorBy == "moreop") {
             updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "Less options..."="lessop"))
             ev$colorBy_state <- "less"
-        } else if(input$proj_colorBy != "Gene Expression") {
+        } else if(input$proj_colorBy != "gene.expr") {
             updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
         }
     })
@@ -335,10 +376,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         })
     })
 
+    
+    # Data dependent
     observe({
+        input$plot_config_reset
         req(input$input_sample, input$proj_type, input$proj_colorBy, !input$proj_colorBy %in% c('lessop', 'moreop'))
+        req(input$input_sample == input$proj_type_I) # Sync the two renderUIs
+        
+        if(!grepl("3D", input$proj_type)) req(input$proj_colorBy_dh == input$proj_colorBy)
         # Prevent rendering twice when switching between gene expression and other colorBy
-        if(input$proj_colorBy != "Gene Expression" && !is.null(input$gene_list)) {
+        if(input$proj_colorBy != "gene.expr" && !is.null(input$gene_list)) {
             return()
         }
         
@@ -355,71 +402,74 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         } else {
             ptype = input$proj_type
         }
-        #isolate({
-            req(ptype %in% names(ev$vis@proj))
-            proj <- ev$vis@proj[[ptype]]
-            idx <- ev$vis@idx
-            req(nrow(proj) == nrow(ev$meta))
-            proj <- cbind(proj, ev$meta)
-        #})
-        proj$alpha <- rep("f", length(nrow(proj)))
         
+        req(ptype %in% names(ev$vis@proj))
+        proj <- ev$vis@proj[[ptype]]
+        req(nrow(proj) == nrow(ev$meta))
+        proj <- cbind(proj, ev$meta)
+        proj$alpha <- rep("f", length(nrow(proj)))
+
         gene_values <- NULL
         gene_exprlim <- NULL
         factor_color <- NULL
         trans <- NULL
+        limits <- NULL
+        factor_breaks <- waiver()
         if(input$proj_colorBy %in% ev$factor_cols) {
             plot_class = "factor"
-            if(!is.null(input$factor_compo)) {
-                proj$alpha <- ifelse(proj[[input$proj_colorBy]] %in% input$factor_compo, "f", "t")
-            }
-            if(grepl("time.bin", input$proj_colorBy)) {
+            if(grepl("time.bin", input$proj_colorBy)) { 
                 req(input$numericbin_pal)
                 factor_color <- get_numeric_bin_color(levels(proj[[input$proj_colorBy]]), palette = input$numericbin_pal)
                 names(factor_color) <- levels(proj[[input$proj_colorBy]])
             } else {
                 req(input$factor_pal)
-                proj[[input$proj_colorBy]] <- as.character(proj[[input$proj_colorBy]])
-                proj[[input$proj_colorBy]][is.na(proj[[input$proj_colorBy]])] <- "NA"
-                unique_factors <- unique(proj[[input$proj_colorBy]])
-                proj[[input$proj_colorBy]] <- factor(proj[[input$proj_colorBy]], levels=unique_factors)
-                factor_color <- get_factor_color(unique_factors, pal=input$factor_pal, maxCol = 9)
-                names(factor_color) <- unique_factors
+                factor_color <- get_factor_color(unique(proj[[input$proj_colorBy]]), pal=input$factor_pal, maxCol = 9)
+                if(input$proj_colorBy == "to.filter") { # special case
+                    factor_color <- rev(factor_color)
+                }
+                names(factor_color) <- unique(proj[[input$proj_colorBy]])
             }
-
             factor_color[["unannotated"]] <- "lightgrey"
-            factor_color[["NA"]] <- "lightgrey"
+            
+            if(grepl("type", input$proj_colorBy, ignore.case = T)) {
+                factor_breaks <- names(which(table(proj[[input$proj_colorBy]]) >= 10)) 
+            } else {
+                factor_breaks <- names(factor_color)
+                factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
+            }
+            
+            if(!is.null(input$factor_compo)) {
+                proj$alpha <- ifelse(proj[[input$proj_colorBy]] %in% input$factor_compo, "f", "t")
+            }
         } else {
             req(input$numeric_pal)
-            plot_class <- "numeric"
-            if(is.null(input$log_transform)) {
-                trans = "identity"
-            } else {
-                trans = input$log_transform
-            }
-            if(input$proj_colorBy == "Gene Expression"){
+            if(input$proj_colorBy == "gene.expr"){
                 plot_class <- "expression"
-                if(!is.null(input$gene_list)) {
-                    if(length(input$gene_list) > 2) {
-                        session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
-                        return()
-                    }
-                    req(input$log_transform_gene)
-                    if(input$log_transform_gene == "log2") {
-                        gene_values <- t(as.matrix(all_cds@auxOrderingData$normalize_expr_data[input$gene_list,idx, drop=F]))
-                    } else if(input$log_transform_gene == "raw") {
-                        gene_values <- t(as.matrix(exprs(all_cds)[input$gene_list,idx, drop=F]))
-                    }
-                }
+                req(input$g_limit_sample == ev$sample)
+                if(length(input$gene_list) == 1) {
+                    req(!is.na(input$g_limit))
+                    req(input$g_limit_ds == input$log_transform_gene)
+                    #print(paste0(input$gene_list, ": ", input$g_limit))
+                    limits <- c(0,input$g_limit)
+                } 
                 if(!is.null(input$cell_expr_gene)) {
-                    if(input$cell_expr_gene!="nulv") { # fix
-                        proj$alpha <- ifelse(rowSums(gene_values > 0) == ncol(gene_values), "f", "t")
+                    if(input$cell_expr_gene!="nulv") {
+                        proj$alpha <- ifelse(rowSums(ev$gene_values > 0) == ncol(ev$gene_values), "f", "t")
                     }
                 }
             } else {
-                if(!is.null(input$numeric_range)) {
-                    proj$alpha <- ifelse(proj[[input$proj_colorBy]] >= input$numeric_range[1] & proj[[input$proj_colorBy]] <= input$numeric_range[2], "f", "t")
-                }
+                plot_class <- "numeric"
+                # !!! IMPORTANT !!! 
+                # This evaluates if renderUI for v_limit has been updated, to prevent the plot from rendering twice
+                # If not updated, previous v_limit UI's corresponding proj_colorBy will not be the same as current input$proj_colorBy, then reactive is aborted.
+                req(ev$value_sample == ev$sample, 
+                    input$proj_colorBy_vlim == input$proj_colorBy, 
+                    input$v_limit_ds == input$log_transform_val,
+                    input$v_limit_sample == ev$sample)
+                req(input$v_limit)
+                proj[[input$proj_colorBy]] <- ev$value
+                limits<-c(min(proj[[input$proj_colorBy]]), input$v_limit)
+                if(!is.null(input$numeric_range)) proj$alpha <- ifelse(proj[[input$proj_colorBy]] >= input$numeric_range[1] & proj[[input$proj_colorBy]] <= input$numeric_range[2], "f", "t")
             }
         }
         
@@ -438,8 +488,10 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             }
         } 
         
+        ev$proj <- proj # Save an original copy for zoom in
         pvals$proj <- proj
         pvals$proj_colorBy <- input$proj_colorBy
+        pvals$legend_title <- pmeta_attr$meta_name[which(pmeta_attr$meta_id == pvals$proj_colorBy)]
         pvals$plot_class <- plot_class
         pvals$plot_col <- plot_col
         pvals$factor_color <- factor_color
@@ -447,91 +499,83 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         pvals$marker_size <- input$marker_size
         pvals$text_size <- input$text_size
         pvals$factor_compo <- input$factor_compo
+        pvals$factor_breaks <- factor_breaks
         pvals$alpha_level <-input$alpha_level
-        pvals$log_transform <- trans
-        pvals$gene_values <- gene_values
-        pvals$expr_lim <- c(0,input$g_limit)
+        pvals$limits <- limits
         pvals$legend = legend
         pvals$onplotAnnot = onplotAnnot
+        pvals$gene_values <- ev$gene_values
+        pvals$log_transform_gene <- input$log_transform_gene
     })
     
+    observe({
+        req(input$proj_colorBy, input$log_transform_val)
+        req(is.numeric(ev$meta[[input$proj_colorBy]]))
+        if(input$log_transform_val == "log10") {
+            ev$value <- log10(ev$meta[[input$proj_colorBy]] + 1) # +1 ok for pseudo? Be careful for small values! Don't allow log in future
+            ev$value_sample <- ev$sample # Use this to sync up reactivity
+        } else {
+            ev$value <- ev$meta[[input$proj_colorBy]]
+            ev$value_sample <- ev$sample
+        }
+    })
+    
+    observe({
+        req(input$log_transform_gene)
+        if(is.null(input$gene_list)) {
+            ev$gene_values <- NULL
+            return()
+        }
+        if(length(input$gene_list) > 2) {
+            session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
+            return()
+        }
+        if(input$log_transform_gene == "log2") {
+            ev$gene_values <- t(as.matrix(all_cds@auxOrderingData$normalize_expr_data[input$gene_list,ev$vis@idx, drop=F]))
+        } else if(input$log_transform_gene == "raw") {
+            ev$gene_values <- t(as.matrix(exprs(all_cds)[input$gene_list,ev$vis@idx, drop=F]))
+        }
+    })
+
+    
+    pp_factor <- reactive({
+        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend.title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = pvals$text_size, legend.text.size = pvals$text_size*3, ncol=4, breaks = pvals$factor_breaks)
+    })    
+    
+    pp_numeric <- reactive({
+        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$numeric_pal, size = pvals$marker_size, plot_title=NULL, legend_title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=T, trans = "identity", limits = pvals$limits)
+    })
+    
+    pp_gene <- reactive({
+        if(is.null(pvals$gene_values)) {
+            ggplot(pvals$proj, aes_string(pvals$plot_col[1],pvals$plot_col[2])) +
+                geom_point(color="lightgrey", size=pvals$marker_size)+
+                theme_bw() +
+                theme(plot.title = element_text(hjust = 0.5), legend.position = c("top"))+ guides(alpha=F)
+        } else {
+            visualize_gene_expression(pvals$gene_values, colnames(pvals$gene_values), pvals$proj[c(pvals$plot_col[1],pvals$plot_col[2])],
+                                          limits=pvals$limits,
+                                          marker_size = pvals$marker_size, ncol=1,
+                                          binary = ifelse(ncol(pvals$gene_values) == 1, F, T),
+                                          pal=pvals$numeric_pal,
+                                          alpha =pvals$proj$alpha,
+                                          alpha_manual = c("f"=1,"t"=pvals$alpha_level),
+                                          na.col = "lightgrey",
+                                          legend_name = ifelse(pvals$log_transform_gene == "log2", 
+                                                               paste0(colnames(pvals$gene_values), " expression\n(log normalized)"), 
+                                                               paste0(colnames(pvals$gene_values), " expression\n(raw count)")))
+        }
+    })
 
     pp1 <- reactive({
-        req(pvals$proj)
-        assign("pvals", reactiveValuesToList(pvals), env = .GlobalEnv)
-        #isolate({
-            if(pvals$plot_class == "factor") {
-                pp<-plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = pvals$text_size)
-            }
-            else if(pvals$plot_class == "numeric") {
-                pp<-plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$numeric_pal, size = pvals$marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=T, trans = pvals$log_transform)
-            } else {
-                if(is.null(pvals$gene_values)) {
-                    pp<-ggplot(pvals$proj, aes_string(pvals$plot_col[1],pvals$plot_col[2])) +
-                        geom_point(color="lightgrey", size=pvals$marker_size)+
-                        theme_bw() +
-                        theme(plot.title = element_text(hjust = 0.5), legend.position = c("top"))+ guides(alpha=F)
-                } else {
-                    pp<-visualize_gene_expression(pvals$gene_values, colnames(pvals$gene_values), pvals$proj[c(pvals$plot_col[1],pvals$plot_col[2])],
-                                                  limits=pvals$expr_lim,
-                                                  marker_size = pvals$marker_size, ncol=1,
-                                                  binary = ifelse(ncol(pvals$gene_values) == 1, F, T),
-                                                  pal=pvals$numeric_pal,
-                                                  alpha =pvals$proj$alpha,
-                                                  alpha_manual = c("f"=1,"t"=pvals$alpha_level),
-                                                  na_col = "lightgrey",
-                                                  legend_name = ifelse(input$log_transform_gene == "log2", "Expression\n(log normalized)", "Raw count"))
-                }
-            }
-        #})
-
-        return(pp)
-    })
-
-    
-    ##### The code for ploting plotly in 2D is no longer used due to user side slow render ######
-    pp1_ly <- reactive({
-        req(pvals$proj, length(pvals$plot_col) == 2)
-        proj <- pvals$proj
-        ds <- pvals$plot_col
-        marker_size <- pvals$marker_size * 2
-        #alpha_manual <- c("f"=1,"t"=pvals$alpha_level)
+        req(length(pvals$plot_col) == 2, pvals$plot_class)
+        #assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
         if(pvals$plot_class == "factor") {
-            #assign("pvals1", reactiveValuesToList(pvals), env=.GlobalEnv)
-            plotly::plot_ly(proj, x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])),
-                            text=proj[[pvals$proj_colorBy]],
-                            hoverinfo="text",
-                            marker = list(size = marker_size),
-                            #opacity=alpha_manual[proj$alpha],
-                            source = source,
-                            key = row.names(proj),
-                            color = as.formula(paste0("~", pvals$proj_colorBy)), colors = pvals$factor_color) %>%
-                plotly::add_markers() %>%
-                layout(legend = list(orientation = 'h'))
+            pp_factor()
         } else if(pvals$plot_class == "numeric") {
-            rgb_scale_list<- numeric_rgb_range(col = get_numeric_color(pvals$numeric_pal), zgrey=F)
-            if(pvals$log_transform == "log10") {
-                color_formula <- as.formula(paste0("~log10(", pvals$proj_colorBy, ")"))
-            } else {
-                color_formula <- as.formula(paste0("~", pvals$proj_colorBy))
-            }
-            plotly::plot_ly(proj,
-                            x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])),
-                            text=proj[[pvals$proj_colorBy]],
-                            hoverinfo="text",
-                            source = source,
-                            key = row.names(proj),
-                            marker = list(size = marker_size,
-                                          color = color_formula,
-                                          colorscale = rgb_scale_list)) %>%
-                plotly::add_markers(opacity=alpha_manual[proj$alpha]) %>%
-                layout(legend = list(orientation = 'h'))
+            pp_numeric()
         } else {
-            if(ncol(pvals$gene_values) > 2) {
-                session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
-                return()
-            }
-            visualize_expression_plotly(expr= pvals$gene_values, projection = proj, ds=ds, gene_probes = colnames(pvals$gene_values), limits = pvals$gene_exprlim, marker_size=marker_size, source = source, pal = pvals$numeric_pal)
+            pp_gene()
         }
     })
 
@@ -540,16 +584,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         pp1()
     })
 
-    output$plotly2d <- renderPlotly({
-        req(pp1_ly())
-        pp1_ly() %>% hide_legend() %>% layout(xaxis=list(zeroline=F), yaxis=list(zeroline=F), dragmode='select')
-    })
-
     pp1_3d <- reactive({
         req(pvals$proj, length(pvals$plot_col) == 3)
         proj <- pvals$proj
         ds <- pvals$plot_col
         marker_size <- pvals$marker_size * 2
+        assign("pvals", reactiveValuesToList(pvals), env = .GlobalEnv)
         #alpha_manual <- c("f"=1,"t"=pvals$alpha_level)
         if(pvals$plot_class == "factor") {
             plotly::plot_ly(proj, x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])), z = as.formula(paste0("~", ds[3])),
@@ -557,31 +597,31 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                             hoverinfo="text",
                             marker = list(size = marker_size),
                             #opacity=alpha_manual[proj$alpha],
-                            source = source,
                             key = row.names(proj),
                             color = as.formula(paste0("~", pvals$proj_colorBy)), colors = pvals$factor_color) %>%
                 plotly::add_markers() %>%
                 layout(legend = list(orientation = 'h'))
         } else if(pvals$plot_class == "numeric") {
             rgb_scale_list<- numeric_rgb_range(col = get_numeric_color(pvals$numeric_pal), zgrey=F)
-            if(pvals$log_transform == "log10") {
-                color_formula <- as.formula(paste0("~log10(", pvals$proj_colorBy, ")"))
-            } else {
-                color_formula <- as.formula(paste0("~", pvals$proj_colorBy))
+            proj$show_value <- proj[[pvals$proj_colorBy]] # Show original value
+            if(!is.null(pvals$limits)) {
+                proj[[pvals$proj_colorBy]][proj[[pvals$proj_colorBy]] < pvals$limits[1]] <- pvals$limits[1]
+                proj[[pvals$proj_colorBy]][proj[[pvals$proj_colorBy]] > pvals$limits[2]] <- pvals$limits[2]
             }
             plotly::plot_ly(proj,
                             x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])), z = as.formula(paste0("~", ds[3])),
-                            text=proj[[pvals$proj_colorBy]],
+                            text=proj$show_value,
                             hoverinfo="text",
-                            source = source,
                             key = row.names(proj),
                             marker = list(size = marker_size,
-                                          color = color_formula,
+                                          color = as.formula(paste0("~", pvals$proj_colorBy)),
                                           colorscale = rgb_scale_list)) %>%
-                plotly::add_markers(opacity=alpha_manual[proj$alpha]) %>%
+                plotly::add_markers(
+                    #opacity=alpha_manual[proj$alpha]
+                ) %>%
                 layout(legend = list(orientation = 'h'))
         } else {
-            visualize_expression_plotly(expr= pvals$gene_values, projection = proj, ds=ds, gene_probes = colnames(pvals$gene_values), limits = pvals$gene_exprlim, marker_size=marker_size, source = source, pal = pvals$numeric_pal)
+            visualize_expression_plotly(expr= pvals$gene_values, projection = proj, ds=ds, gene_probes = colnames(pvals$gene_values), limits = pvals$limits, marker_size=marker_size, pal = pvals$numeric_pal)
         }
     })
 
@@ -632,6 +672,33 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             }
         }
     )
+    
+    output$download_bp_plot <- downloadHandler(
+        filename = function(format = input$bp_plotf) {
+            fn_ext<-switch(format,
+                           png = '.png',
+                           tiff = '.tiff',
+                           eps = '.eps',
+                           pdf = '.pdf'
+            )
+            paste('Plot-', Sys.Date(), fn_ext, sep='')
+        },
+        content = function(con, format = input$bp_plotf) {
+            req(input$bp_down_plotw, input$bp_down_ploth, format)
+            fn_dev<-switch(format,
+                           png = 'png',
+                           tiff = 'tiff',
+                           eps = 'eps',
+                           pdf = 'pdf'
+            )
+            if(fn_dev!='html') {
+                req(bp1())
+                ggsave(con, plot = bp1(), device = fn_dev, width = input$bp_down_plotw, height = input$bp_down_ploth)
+                shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
+                if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
+            } 
+        }
+    )
 
     output$download_data <- downloadHandler(
         filename = function(format = input$selectCell_goal) {
@@ -663,10 +730,25 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         ns = session$ns
         selected_samples <- ev$cells
         ns <- session$ns
-        tagList(
+        isolate({
+            if(!is.null(input$selectCell_meta_col)) {
+                meta_col_selected<-input$selectCell_meta_col
+            } else {
+                meta_col_selected<-NULL
+            }
+            # if(!is.null(input$selectCell_goal)) {
+            #     goal_selected<-input$selectCell_goal
+            # } else {
+            #     goal_selected<-NULL
+            # }
+        })
+
+        wellPanel(
+            class = "SidebarControl",
             fluidRow(
-                column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells selected by", ev$cell_source), choices = list(
+                column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells chosen by", ev$cell_source), choices = list(
                     "Name selected cell subset" = "addmeta",
+                    "Zoom in to selected cells" = "zoom", 
                     "Compute new PCA/UMAP with selected cells" = "compdimr",
                     "Download expression data (Monocle cds format) of selected cells" = "downcell",
                     "Download meta data of selected cells" = "downmeta"
@@ -676,7 +758,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                 "input.selectCell_goal == 'addmeta'", ns=ns,
                 fluidRow(
                     column(6,
-                           selectizeInput(ns("selectCell_meta_col"), "Meta Class", choices = ev$meta_custom, options=list(create=T)),
+                           selectizeInput(ns("selectCell_meta_col"), "Meta Class", choices = ev$meta_custom, options=list(create=T), selected = meta_col_selected),
                            shinyBS::bsTooltip(
                                ns("selectCell_meta_col"),
                                title = "Type name and press enter to add a new meta class, delete it use the button on the right",
@@ -691,6 +773,20 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                     column(6, textInput(ns("selectCell_group_name"), "Name Subset", placeholder="e.g., group 1")),
                     column(6, tags$br(),actionButton(ns("selectCell_add"), "Add Group", class = "btn-info btn_leftAlign"))
                 )
+            ),
+            conditionalPanel(
+                "input.selectCell_goal == 'zoom'", ns=ns,
+                fluidRow(
+                    column(6,
+                           textInput(ns("zoom_name"), "Sample name:", placeholder="optional")
+                    ),
+                    column(6,
+                           tags$br(),
+                           actionButton(ns("zoom_in"), "Zoom in", class = "btn-primary btn_rightAlign")
+                    )
+                ),
+                tags$li("Zoom out by click top right reset button."),
+                tags$li("If name provided, a new sample subset will be created.")
             ),
             conditionalPanel(
                 "input.selectCell_goal == 'downcell' || input.selectCell_goal == 'downmeta'", ns=ns,
@@ -741,9 +837,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
          isolate({
              area_selected<-input$plot2d_brush
              plot_cols <- which(colnames(pvals$proj) %in% pvals$plot_col)
-             ev$cells <- rownames(ev$meta)[which(pvals$proj[[plot_cols[1]]] >= area_selected$xmin & pvals$proj[[plot_cols[1]]] <= area_selected$xmax & 
+             ev$cells <- rownames(pvals$proj)[which(pvals$proj[[plot_cols[1]]] >= area_selected$xmin & pvals$proj[[plot_cols[1]]] <= area_selected$xmax & 
                                                      pvals$proj[[plot_cols[2]]] >= area_selected$ymin & pvals$proj[[plot_cols[2]]] <= area_selected$ymax)]
-             ev$cell_source <- "plot select"
+             ev$cell_source <- "plot selection"
          })
      })
      
@@ -753,22 +849,27 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
          input$numeric_range
          input$cell_expr_gene
          
-         isolate({
-             if(input$proj_colorBy %in% ev$factor_cols & !is.null(input$factor_compo)) {
-                 ev$cells <- rownames(ev$meta)[ev$meta[[input$proj_colorBy]] %in% input$factor_compo]
-             } else if(input$proj_colorBy != "Gene Expression" & !is.null(input$numeric_range)) {
-                 filter_std <- ev$meta[[input$proj_colorBy]] >= input$numeric_range[1] & ev$meta[[input$proj_colorBy]] <= input$numeric_range[2]
-                 ev$cells <- rownames(ev$meta)[filter_std]
-             } else if(input$proj_colorBy == "Gene Expression") {
-                 req(pvals$gene_values, input$cell_expr_gene)
-                 if(input$cell_expr_gene!="nulv") {
-                     ev$cells <- names(which(rowSums(pvals$gene_values > 0) == ncol(pvals$gene_values)))
-                 } else {
-                     ev$cells <- NULL
-                 }
+         if(input$proj_colorBy %in% ev$factor_cols) {
+             req(input$factor_compo)
+             ev$cells <- rownames(ev$meta)[ev$meta[[input$proj_colorBy]] %in% input$factor_compo]
+         } else if(input$proj_colorBy != "gene.expr") {
+             req(input$numeric_range)
+             vals <- ev$value
+             filter_std <- vals >= input$numeric_range[1] & vals <= input$numeric_range[2]
+             ev$cells <- rownames(ev$meta)[filter_std]
+         } else if(input$proj_colorBy == "gene.expr") {
+             if(is.null(ev$gene_values)) {
+                 ev$cells <- NULL
+                 return()
              }
-             ev$cell_source <- input$proj_colorBy  
-         })
+             req(input$cell_expr_gene)
+             if(input$cell_expr_gene!="nulv") {
+                 ev$cells <- names(which(rowSums(ev$gene_values > 0) == ncol(ev$gene_values)))
+             } else {
+                 ev$cells <- NULL
+             }
+         }
+         ev$cell_source <- input$proj_colorBy 
      })
 
     # Add by interactive mode
@@ -843,39 +944,101 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
 
     output$g_limit_ui <- renderUI({
         ns <- session$ns
-        req(input$gene_list)
-        #glim <- round(quantile(pvals$gene_values, .95),1)
-        fluidRow(
-            column(6,
-                   numericInput(ns("g_limit"), label = "Expression Cutoff", value = 5, min = 0)
-            ),
-            column(6,
-                   tags$br(),
-                   actionLink(ns("gene_histogram_trigger"), label = "Expression Histogram", icon = icon("chevron-right"))
+        input$plot_config_reset
+        if(length(input$gene_list) == 1) {
+            glim <- round(quantile(ev$gene_values[,1], .975),1)
+            dropdownButton2(inputId=ns("val_cutoff"),
+                            width = "500px",
+                            plotOutput(ns("gene_histogram_plot")),
+                            fluidRow(
+                                column(6, numericInput(ns("g_limit"), 
+                                                       label = "Expression Cutoff", 
+                                                       value = glim, min = 0)),
+                                column(6, tags$p("Red line indicate max value for color scale. Default cutoff is set at 97.5th percentile."))
+                            ),
+                            conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_ds"), label = NULL, value = input$log_transform_gene)),
+                            conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
+                            circle = T, label ="Expression histogram and color scale cutoff", tooltip=T, right = T,
+                            icon = icon("chart-bar"), size = "xs", status="info", class = "btn_rightAlign")
+        } else {
+            tagList(
+                conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
+                conditionalPanel("1==0", ns = ns, numericInput(ns("g_limit"), label = NULL, value = NA))
             )
-        )
-    })
-
-    observeEvent(input$gene_histogram_trigger, {
-        ns = session$ns
-        showModal(modalDialog(
-            title = "Expression Histogram", size = "m",
-            plotOutput(ns("gene_histogram_plot")),
-            easyClose = TRUE
-        ))
+        }
     })
 
     output$gene_histogram_plot <- renderPlot({
-        req(pvals$gene_values)
-        gname <- colnames(pvals$gene_values)
-        hist(pvals$gene_values[,1], xlab=paste0(input$log_transform_gene, "expression"), main = paste0("Expression histogram of gene ", gname))
+        req(ev$gene_values)
+        gname <- colnames(ev$gene_values)
+        hist(ev$gene_values[,1], xlab=paste0(input$log_transform_gene, "expression"), main = paste0("Expression histogram of gene ", gname))
         abline(v = input$g_limit, col=c("red"), lty=c(2), lwd=c(3))
-        text(x = input$g_limit, y = 100, "Expr cut")
     })
 
+    output$v_limit_ui <- renderUI({
+        ns <- session$ns
+        input$plot_config_reset
+        req(!input$proj_colorBy %in% c(ev$factor_cols, 'gene.expr'))
+        v_limit <- round(quantile(ev$value, .975), 1)
+        dropdownButton2(inputId=ns("v_cutoff"),
+                        width = "500px",
+                        plotOutput(ns("value_histogram_plot")),
+                        fluidRow(
+                            column(6, numericInput(ns("v_limit"), label = "Cutoff", value = v_limit, min = 0)),
+                            column(6, tags$p("Red line indicate max value for color scale. Default cutoff is set at 97.5th percentile."))
+                        ),
+                        conditionalPanel("1==0", ns = ns, textInput(ns("proj_colorBy_vlim"), label = NULL, value = input$proj_colorBy)), # This is necessary!!! See explanation in the observer
+                        conditionalPanel("1==0", ns = ns, textInput(ns("v_limit_ds"), label = NULL, value = input$log_transform_val)),
+                        conditionalPanel("1==0", ns = ns, textInput(ns("v_limit_sample"), label = NULL, value = input$input_sample)),
+                        circle = T, label ="Histogram and color scale cutoff", tooltip=T, right = T,
+                        icon = icon("chart-bar"), size = "xs", status="info", class = "btn_rightAlign")
+    })
+    
+    output$value_histogram_plot <- renderPlot({
+        req(pvals$plot_class == "numeric")
+        vals <- pvals$proj[[pvals$proj_colorBy]]
+        hist(vals, xlab=pvals$legend_title, main = paste0("Histogram of ", pvals$legend_title))
+        abline(v = input$v_limit, col=c("red"), lty=c(2), lwd=c(3))
+    })
+    
+    observeEvent(input$zoom_in, {
+        req(ev$cells)
+        if(input$zoom_name == "") {
+            pvals$proj <- ev$proj[ev$cells,]
+            if(!is.null(ev$gene_values)) pvals$gene_values <- ev$gene_values[ev$cells,, drop=F]
+            return()
+        }
+        if(!is.na(as.numeric(input$zoom_name))) {
+            session$sendCustomMessage(type = "showalert", "Number name not allowed.")
+            return()
+        }
+        if(input$zoom_name %in% c(names(sclist$clist), names(sclist$elist))) {
+            session$sendCustomMessage(type = "showalert", "Name already taken.")
+            return()
+        }
+        newvis <- new("cvis", idx = match(ev$cells, colnames(all_cds)))
+        newvis@proj[[input$proj_type]] <- pvals$proj[ev$cells, pvals$plot_col]
+        rval$list[[input$zoom_name]] <- newvis
+        rval$ustats <- "add"
+        updateSelectInput(session, "input_sample", selected = input$zoom_name)
+    })
 
     observeEvent(input$compdimr_run, {
         req(ev$cells)
+        
+        error_I <- 0
+        tryCatch({
+            reticulate::import("umap")
+        }, warning = function(w) {
+        }, error = function(e) {
+            error_I <<-1
+        })
+        
+        if(error_I) {
+            session$sendCustomMessage(type = "showalert", "UMAP not installed, please install umap to python environment first.")
+            return()
+        }
+        
         if(is.null(input$compdimr_name) || input$compdimr_name == "") {
             session$sendCustomMessage(type = "showalert", "Enter a name first.")
             return()
@@ -884,7 +1047,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             session$sendCustomMessage(type = "showalert", "Number name not allowed.")
             return()
         }
-        if(input$compdimr_name %in% c(names(sclist$clist), names(sclist$clist))) {
+        if(input$compdimr_name %in% c(names(sclist$clist), names(sclist$elist))) {
             session$sendCustomMessage(type = "showalert", "Name already taken.")
             return()
         }
@@ -893,6 +1056,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         } else {
             resform <- NULL
         }
+        
+        
 
         withProgress(message = 'Processing...', {
             incProgress(1/2)
@@ -912,9 +1077,164 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             rval$list[[input$compdimr_name]] <- newvis
             rval$ustats <- "add"
         })
+        updateSelectInput(session, "input_sample", selected = input$compdimr_name)
         showNotification("Dimension reduction successfully computed and listed in samples.", type="message", duration=10)
     })
 
+    
+    ### Feature Plot ###
+    
+    output$bp_gene_plot_ui <- renderUI({
+        req(input$bp_show_ploth)
+        ns <- session$ns
+        plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
+    })
+    
+    updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
+    
+    output$bp_sample_ui <- renderUI({
+        ns <- session$ns
+        sample_names <- names(ev$list)
+        isolate({
+            if(!is.null(input$input_sample)) {
+                selected <- input$input_sample
+            } else {
+                selected <- NULL
+            }
+        })
+        selectInput(ns("bp_sample"),"Choose Sample", choices=sample_names, selected = selected)
+    })
+    
+    # The follwoing observers control the syncing between explorer sample input and feature plot sample input
+    observe({
+        req(!is.null(input$input_sample))
+        updateSelectInput(session, "bp_sample", "Choose Sample", selected = input$input_sample)
+    })
+    
+    observe({
+        req(!is.null(input$bp_sample))
+        updateSelectInput(session, "input_sample", selected = input$bp_sample)
+    })
+    
+    
+    # The follwoing observers control the syncing between explorer gene input and feature plot gene input
+    observe({
+        req(!is.null(input$gene_list) & length(input$gene_list) == 1)
+        updateSelectInput(session, "bp_gene", selected = input$gene_list)
+    })
+    
+    observe({
+        req(!is.null(input$bp_gene))
+        updateSelectInput(session, "gene_list", selected = input$bp_gene)
+    })
+    
+    
+    output$bp_colorBy_ui <- renderUI({
+        ns <- session$ns
+        selectInput(ns("bp_colorBy"), "Color By:", choices = bp_colorBy_choices)
+    })
+    
+    output$bp_include_ui <- renderUI({
+        ns <- session$ns
+        req(input$bp_colorBy)
+        factors <- names(which(table(ev$meta[[input$bp_colorBy]]) >= 10)) 
+        factors <- factors[factors != "unannotated"]
+        tagList(
+            selectInput(ns("bp_include"), "Include:", choices = factors, selected=factors, multiple = T, width = '100%'),
+            conditionalPanel("1==0", textInput(ns("bp_include_I"), NULL, value = ev$sample)) # indicator of rendering state of bp_include
+        )
+    })
+    
+    
+    output$bp_plot_configure_ui <- renderUI({
+        input$bp_plot_config_reset
+        ns <- session$ns
+        
+        req(input$bp_colorBy)
+        if(input$bp_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
+            default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$bp_colorBy)]
+        } else {
+            default_pal <- NULL
+        }
+        
+        if(input$bp_colorBy %in% ev$factor_cols){
+            if(grepl("time.bin", input$bp_colorBy)) {
+                sel <- selectInput(ns("bp_numericbin_pal"), "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
+            } else {
+                sel <- selectInput(ns("bp_factor_pal"), "Palette", choices=factor_color_opt(), selected=default_pal)
+            }
+        } else {
+            return()
+        }
+        
+        dropdownButton2(inputId=ns("bp_plot_configure"),
+                        fluidRow(
+                            column(6, numericInput(ns("bp_downsample"), "Downsample #", min=2, max = 10000, value=500)),
+                            column(6, selectInput(ns("bp_plot_type"), "Plot Type", choices = list("Box plot" = "box", "Violin plot" = "violin", "Plot points" = "points")))
+                        ),
+                        fluidRow(
+                            column(6, numericInput(ns("bp_marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
+                            column(6, numericInput(ns("bp_text_size"), "Text Size", min = 1, value = 15, step = 1))
+                        ),
+                        fluidRow(
+                            column(6, sel),
+                            column(6, selectInput(ns("bp_legend_type"), "Legend", choices=c("Color Legend" = "l", "None" = "none"), selected = "none"))
+                        ),
+                        fluidRow(
+                            column(6, numericInput(ns("bp_xaxis_angle"), "X-axis Label Angle", value = 45, step=1)),
+                            column(6, numericInput(ns("bp_show_ploth"), "Plot Height", min=1, value = 5, step=1))
+                        ),
+                        circle = T, label ="Configure Plot", tooltip=T, right = T,
+                        icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
+    })
+    
+    bp1 <- reactive({
+        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected")
+        req(ev$sample == input$bp_sample, ev$sample == input$bp_include_I) # IMPORTANT, this controls the sync between sample choices in the explorer and the featurePlot, and prevent double rendering
+        cur_group <- ev$meta[[input$bp_colorBy]]
+        # Downsample cells from each cell type
+        cur_idx <- unlist(lapply(input$bp_include, function(g) {
+            cidx <- which(cur_group==g)
+            sample(cidx, min(length(cidx),input$bp_downsample))
+        }))
+        cur_meta <- ev$meta[cur_idx, input$bp_colorBy, drop=F]
+        
+        if(grepl("time.bin", input$bp_colorBy)) { 
+            req(input$bp_numericbin_pal)
+            factor_color <- get_numeric_bin_color(levels(ev$meta[[input$bp_colorBy]]), palette = input$bp_numericbin_pal)
+            names(factor_color) <- levels(ev$meta[[input$bp_colorBy]])
+        } else {
+            req(input$bp_factor_pal)
+            factor_color <- get_factor_color(unique(ev$meta[[input$bp_colorBy]]), pal=input$bp_factor_pal, maxCol = 9)
+            names(factor_color) <- unique(ev$meta[[input$bp_colorBy]])
+        }
+        factor_color[["unannotated"]] <- "lightgrey"
+        
+        colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
+        if(input$bp_log_transform_gene == "log2") {
+            df <- as.data.frame(as.matrix(all_cds@auxOrderingData$normalize_expr_data[input$bp_gene, ev$vis@idx[cur_idx]]))
+        } else {
+            df <- as.data.frame(as.matrix(exprs(all_cds)[input$bp_gene, ev$vis@idx[cur_idx]]))
+        }
+        
+        feature_plot(df, input$bp_gene, 
+                     group.by = input$bp_colorBy, 
+                     meta = cur_meta, 
+                     pal = factor_color, 
+                     style = input$bp_plot_type, log_scale = F, legend.title = colorBy_name, legend.pos = "right", 
+                     text.size = input$bp_text_size, pointSize = input$bp_marker_size, legend = ifelse(input$bp_legend_type == "l", T, F), 
+                     breaks = unique(cur_group), axis.text.angle = input$bp_xaxis_angle, 
+                     order.by = ifelse(grepl("time",input$bp_colorBy, ignore.case = T), "none", "mean"), 
+                     ylab.label = ifelse(input$bp_log_transform_gene == "log2", "Expression (log2 normalized)", "Expression (raw count)")
+        )
+    })
+    
+    output$bp_gene_plot <- renderPlot({
+        req(bp1())
+        bp1()
+    })
+    
+    
     rval <- reactiveValues(mclass = NULL, cells=NULL, group_name=NULL, ulist = list())
     return(rval)
 }

@@ -78,6 +78,24 @@ sexpr_nmlog <- all_cds@auxOrderingData$normalize_expr_data
 rownames(sexpr_nmlog) <- fData(all_cds)$gene_short_name
 all_cds@auxOrderingData$normalize_expr_data <- sexpr_nmlog
 
+
+
+# convert all non-numeric meta into factor, and replace _ with space to make names look nicer
+for (x in as.character(pmeta_attr$meta_id)) {
+    if(grepl("time.bin",x)) next
+    if(x %in% colnames(pData(all_cds))) {
+        if(!is.numeric(pData(all_cds)[[x]])) {
+            print(x)
+            unique_levels<- as.character(unique(pData(all_cds)[[x]]))
+            if("unannotated" %in% unique_levels) unique_levels <- c(unique_levels[unique_levels!="unannotated"], "unannotated")
+            replace_levels <- gsub("_", " ", unique_levels, fixed=TRUE)
+            names(replace_levels) <- unique_levels
+            pData(all_cds)[[x]] <- replace_levels[as.character(pData(all_cds)[[x]])]
+            pData(all_cds)[[x]] <- factor(pData(all_cds)[[x]], levels = replace_levels)
+        }
+    } 
+}
+
 pData(all_cds)$embryo.time.bin[which(pData(all_cds)$embryo.time.bin == "unannotated")] <- NA
 pData(all_cds)$raw.embryo.time.bin[which(pData(all_cds)$embryo.time.bin == "unannotated")] <- NA
 first_num <- as.numeric(stringi::stri_extract_first_regex(unique(pData(all_cds)$embryo.time.bin), "[0-9]+"))
@@ -87,51 +105,55 @@ pData(all_cds)$raw.embryo.time.bin <- factor(pData(all_cds)$raw.embryo.time.bin,
 # Now construct a "meta attribute dataframe" to store the info of what each column is about, and which ones you want to show
 # This will be used in the 'Color By' option
 colorby_order <- c(
-    "Cell type" = "cell.type",
+    "Cell type (broad)" = "cell.type",
+    "Cell type + cell subtype" = "plot.cell.type",
     "Cell subtype" = "cell.subtype",
-    "Cell type & subtype" = "plot.cell.type",
     
-    "Gene Expression" = "Gene Expression", # This will not be in any meta column
+    "Gene expression" = "gene.expr", # This will not be in any meta column
     "UMI count" = "n.umi",
-    "Number of Expressed Genes" = "num.genes.expressed",
+    "Number of expressed Genes" = "num.genes.expressed",
     "Size factor" = "Size_Factor",
-    "Problematic cells" = "to.filter",
+    "Likely doublets/debris" = "to.filter",
     
     "Batch" = "batch",
     "Time point" = "time.point",
-    "Raw embryo time" = "raw.embryo.time",
-    "Smoothed embryo time" = "embryo.time",
-    "Smoothed embryo time bin" = "embryo.time.bin",
-    "Raw embryo time bin" = "raw.embryo.time.bin",
+    "Embryo time" = "raw.embryo.time",
+    "Embryo time bin" = "raw.embryo.time.bin",
     
-    "150min Early Lineage" = "t150.lineages",
-    "250min Early Lineage" = "t250.lineages",
+    "150min early lineage" = "t150.lineages",
+    "250min early lineage" = "t250.lineages",
     "Muscle mesoderm early lineage" = "mm.lineage",
-    "Abala Early Lineage" = "temp.ABala.250",
+    "Abala early lineage" = "temp.ABala.250",
     
     "Cluster" = "Cluster" # Note only this meta data is taken from local cvis object, 'Cluster' is now allowed in global meta colnames.
 )
 
 pmeta_attr <- data.frame(meta_id = colorby_order, meta_name = names(colorby_order), stringsAsFactors=FALSE)
 
-# pmeta_attr$is_numeric <- sapply(as.character(pmeta_attr$meta_id), function(x) {
-#     if(x %in% colnames(pData(all_cds))) {
-#         is.numeric(pData(all_cds)[[x]])
-#     } else if(x %in% colnames(clist[[1]]@pmeta)) {
-#         is.numeric(clist[[1]]@pmeta[[x]])
-#     } else if(x == "Gene Expression") {
-#         T
-#     } else {
-#         NA
-#     }
-# })
+pmeta_attr$is_numeric <- sapply(as.character(pmeta_attr$meta_id), function(x) {
+    if(x %in% colnames(pData(all_cds))) {
+        is.numeric(pData(all_cds)[[x]])
+    } else if(x %in% colnames(clist[[1]]@pmeta)) {
+        is.numeric(clist[[1]]@pmeta[[x]])
+    } else if(x == "gene.expr") {
+        T
+    } else {
+        NA
+    }
+})
+
+
+
+# Which meta to show in (hide from) basic menu [this is set in global.R]
+# pmeta_attr$basic_menu <- ifelse(pmeta_attr$meta_name %in% c("Cell type", "Cell subtype", "Gene Expression", "Embryo time bin"), T, F)
 
 # optional, default_pal of each meta
 pmeta_attr$dpal <- ifelse(pmeta_attr$is_numeric, "rainbow2", "Set1")
 pmeta_attr$dpal[grepl("time.bin", pmeta_attr$meta_id)] <- "gg_color_hue"
-
+pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
+pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor", "raw.embryo.time", "embryo.time"))] <- "identity"
 # For now you need to manually specify
-pData(all_cds) <- pData(all_cds)[,which(colnames(pData(all_cds)) %in% meta_order_name)]
+pData(all_cds) <- pData(all_cds)[,which(colnames(pData(all_cds)) %in% colorby_order)]
 
 
 usethis::use_data(clist, overwrite = T)
