@@ -3,7 +3,7 @@
 #' @export
 explorer_ui <- function(id) {
     ns <- NS(id)
-    uiOutput(ns("eui")) %>% withSpinner(type = 6, size = 2)
+    uiOutput(ns("eui")) %>% withSpinner(type = 3, size = 3, color.background = "white")
 }
 
 #' @export
@@ -36,7 +36,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                         )
                        ),
                        uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = NULL, multiple = T),
+                       selectizeInput(ns("gene_list"), "Search Gene:", choices = gene_symbol_choices, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
                        uiOutput(ns("data_highlight"))
                    ),
@@ -77,7 +77,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             wellPanel(
                 fluidRow(
                     column(3, uiOutput(ns("bp_sample_ui"))),
-                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", NULL)),
+                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected")),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
                     column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
                 ),
@@ -109,17 +109,30 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             uiOutput(ns("bp_gene_plot_ui")) 
         )
         
+        cui <- tagList(
+                DT::dataTableOutput(ns("ct_marker_tbl"))
+        )
+        
         if(onlyEUI) {
             return(eui)
         } else {
             tabsetPanel(
+                id = ns("core_tab"),
                 tabPanel(
+                    value = "eui",
                     tags$b("Explorer"),
                     eui
                 ),
                 tabPanel(
+                    value = "fui",
                     tags$b("Expression by Cell Type"),
                     fui
+                ),
+                tabPanel(
+                    value = "cui",
+                    tags$b("Cell Type Markers"),
+                    tags$br(),
+                    cui
                 )
             )
         }
@@ -128,7 +141,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     output$input_sample_ui <- renderUI({
         ns <- session$ns
         sample_names <- names(ev$list)
-        selectInput(ns("input_sample"), tags$div("Choose Sample:", pivot_help_UI(ns("choose_sample_info"), title = NULL, label = NULL, icn="cog", type = "link", tooltip = F, style = "padding-left:10px;")), choices=sample_names)
+        selectInput(ns("input_sample"), tags$div("Choose Sample:", pivot_help_UI(ns("choose_sample_info"), title = NULL, label = NULL, icn="question-circle", type = "link", tooltip = F, style = "padding-left:10px;")), choices=sample_names)
     })
 
     output$proj_type_ui <- renderUI({
@@ -168,33 +181,14 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         input$plot_config_reset
         ns <- session$ns
         
-        req(input$proj_colorBy)
-        if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
-            default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$proj_colorBy)]
-        } else {
-            default_pal <- NULL
-        }
-        
-        if(input$proj_colorBy == 'gene.expr') {
-            sel<-selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
-        } else if(input$proj_colorBy %in% ev$factor_cols){
-            if(grepl("time.bin", input$proj_colorBy)) {
-                sel <- selectInput(ns("numericbin_pal"), "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
-            } else {
-                sel <- selectInput(ns("factor_pal"), "Palette", choices=factor_color_opt(), selected=default_pal)
-            }
-        } else {
-            sel<- selectInput(ns("numeric_pal"), "Palette", choices=numeric_palettes, selected=default_pal)
-        }
-        
         dropdownButton2(inputId=ns("plot_configure"),
                         fluidRow(
                             column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
                             column(6, numericInput(ns("text_size"), "Text Size", min = 1, value = 3, step = 1))
                         ),
                         fluidRow(
-                            column(6, sel),
-                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none")))
+                            column(6, selectInput(ns("color_pal"), "Palette", choices=factor_color_opt())),
+                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected = "ol"))
                         ),
                         fluidRow(
                             column(6, numericInput(ns("show_ploth"), "Height (resize window for width)", min=1, value = 7, step=1)),
@@ -204,6 +198,27 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                         icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
     })
     
+    observeEvent(input$proj_colorBy, {
+        req(!input$proj_colorBy %in% c("moreop", "lessop"))
+        if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
+            default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$proj_colorBy)]
+        } else {
+            default_pal <- NULL
+        }
+        
+        if(input$proj_colorBy == 'gene.expr') {
+            updateSelectInput(session, "color_pal", "Palette", choices=numeric_palettes, selected=default_pal)
+        } else if(input$proj_colorBy %in% ev$factor_cols){
+            if(grepl("time.bin", input$proj_colorBy)) {
+                updateSelectInput(session, "color_pal", "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
+            } else {
+                updateSelectInput(session, "color_pal",  "Palette", choices=factor_color_opt(), selected=default_pal)
+            }
+        } else {
+            updateSelectInput(session, "color_pal",  choices=numeric_palettes, selected=default_pal)
+        }
+        
+    })
 
     observe({
         req(ev$cells)
@@ -212,7 +227,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         })
     })
     
-    updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
+    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
 
     output$plot_ui <- renderUI({
         ns <- session$ns
@@ -225,7 +240,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                id = ns("plot2d_brush")
                            ),
                            hover = hoverOpts(id = ns("plot2d_hover"), delay = 50)), #%>% withSpinner()
-                uiOutput(ns("plot2d_tooltip"))
+                uiOutput(ns("plot2d_tooltip")),
+                tags$p("Hint: Mouse over points to see the detailed annotation. Drag on plots to select cells. Set plot aesthetics (legend etc.) using cog button on topright.")
             )
         } else {
             req(pp1_3d())
@@ -269,7 +285,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         proj_colorBy_dh <- input$proj_colorBy # This is necessary!!! See explanation in the observer
         ui1 <- NULL
         if(input$proj_colorBy %in% ev$factor_cols) {
-            if(grepl("type", input$proj_colorBy, ignore.case = T)) {
+            if(input$proj_colorBy %in% c("cell.type", "cell.subtype")) {
                 factors <- names(which(table(ev$meta[[input$proj_colorBy]]) >= 10)) 
             } else {
                 factors <- as.character(levels(factor(ev$meta[[input$proj_colorBy]])))
@@ -339,8 +355,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         })
     })
 
-    observe({
-        req(input$proj_colorBy)
+    observeEvent(input$proj_colorBy, {
         if(input$proj_colorBy == "lessop") {
             updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_basic, ev$meta_custom, "More options..."="moreop"))
             ev$colorBy_state <- "more"
@@ -348,7 +363,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "Less options..."="lessop"))
             ev$colorBy_state <- "less"
         } else if(input$proj_colorBy != "gene.expr") {
-            updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
+            if(!is.null(input$gene_list)) {
+                updateSelectInput(session, "gene_list", selected = "")
+            }
         }
     })
 
@@ -418,12 +435,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         if(input$proj_colorBy %in% ev$factor_cols) {
             plot_class = "factor"
             if(grepl("time.bin", input$proj_colorBy)) { 
-                req(input$numericbin_pal)
-                factor_color <- get_numeric_bin_color(levels(proj[[input$proj_colorBy]]), palette = input$numericbin_pal)
+                req(input$color_pal %in% numeric_bin_color_opt())
+                factor_color <- get_numeric_bin_color(levels(proj[[input$proj_colorBy]]), palette = input$color_pal)
                 names(factor_color) <- levels(proj[[input$proj_colorBy]])
             } else {
-                req(input$factor_pal)
-                factor_color <- get_factor_color(unique(proj[[input$proj_colorBy]]), pal=input$factor_pal, maxCol = 9)
+                req(input$color_pal %in% factor_color_opt())
+                factor_color <- get_factor_color(unique(proj[[input$proj_colorBy]]), pal=input$color_pal, maxCol = 9)
                 if(input$proj_colorBy == "to.filter") { # special case
                     factor_color <- rev(factor_color)
                 }
@@ -431,18 +448,18 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             }
             factor_color[["unannotated"]] <- "lightgrey"
             
-            if(grepl("type", input$proj_colorBy, ignore.case = T)) {
+            if(input$proj_colorBy %in% c("cell.type", "cell.subtype")) {
                 factor_breaks <- names(which(table(proj[[input$proj_colorBy]]) >= 10)) 
             } else {
                 factor_breaks <- names(factor_color)
-                factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
             }
+            factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
             
             if(!is.null(input$factor_compo)) {
                 proj$alpha <- ifelse(proj[[input$proj_colorBy]] %in% input$factor_compo, "f", "t")
             }
         } else {
-            req(input$numeric_pal)
+            req(input$color_pal)
             if(input$proj_colorBy == "gene.expr"){
                 plot_class <- "expression"
                 req(input$g_limit_sample == ev$sample)
@@ -495,7 +512,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         pvals$plot_class <- plot_class
         pvals$plot_col <- plot_col
         pvals$factor_color <- factor_color
-        pvals$numeric_pal <- input$numeric_pal
+        pvals$color_pal <- input$color_pal
         pvals$marker_size <- input$marker_size
         pvals$text_size <- input$text_size
         pvals$factor_compo <- input$factor_compo
@@ -535,6 +552,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         } else if(input$log_transform_gene == "raw") {
             ev$gene_values <- t(as.matrix(exprs(all_cds)[input$gene_list,ev$vis@idx, drop=F]))
         }
+        #assign("ev", reactiveValuesToList(ev), env =.GlobalEnv)
     })
 
     
@@ -543,7 +561,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     })    
     
     pp_numeric <- reactive({
-        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$numeric_pal, size = pvals$marker_size, plot_title=NULL, legend_title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=T, trans = "identity", limits = pvals$limits)
+        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$color_pal, size = pvals$marker_size, plot_title=NULL, legend_title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=T, trans = "identity", limits = pvals$limits)
     })
     
     pp_gene <- reactive({
@@ -557,7 +575,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                                           limits=pvals$limits,
                                           marker_size = pvals$marker_size, ncol=1,
                                           binary = ifelse(ncol(pvals$gene_values) == 1, F, T),
-                                          pal=pvals$numeric_pal,
+                                          pal=pvals$color_pal,
                                           alpha =pvals$proj$alpha,
                                           alpha_manual = c("f"=1,"t"=pvals$alpha_level),
                                           na.col = "lightgrey",
@@ -569,7 +587,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
 
     pp1 <- reactive({
         req(length(pvals$plot_col) == 2, pvals$plot_class)
-        #assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
+        assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
         if(pvals$plot_class == "factor") {
             pp_factor()
         } else if(pvals$plot_class == "numeric") {
@@ -602,7 +620,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                 plotly::add_markers() %>%
                 layout(legend = list(orientation = 'h'))
         } else if(pvals$plot_class == "numeric") {
-            rgb_scale_list<- numeric_rgb_range(col = get_numeric_color(pvals$numeric_pal), zgrey=F)
+            rgb_scale_list<- numeric_rgb_range(col = get_numeric_color(pvals$color_pal), zgrey=F)
             proj$show_value <- proj[[pvals$proj_colorBy]] # Show original value
             if(!is.null(pvals$limits)) {
                 proj[[pvals$proj_colorBy]][proj[[pvals$proj_colorBy]] < pvals$limits[1]] <- pvals$limits[1]
@@ -621,7 +639,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                 ) %>%
                 layout(legend = list(orientation = 'h'))
         } else {
-            visualize_expression_plotly(expr= pvals$gene_values, projection = proj, ds=ds, gene_probes = colnames(pvals$gene_values), limits = pvals$limits, marker_size=marker_size, pal = pvals$numeric_pal)
+            visualize_expression_plotly(expr= pvals$gene_values, projection = proj, ds=ds, gene_probes = colnames(pvals$gene_values), limits = pvals$limits, marker_size=marker_size, pal = pvals$color_pal)
         }
     })
 
@@ -747,8 +765,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             class = "SidebarControl",
             fluidRow(
                 column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells chosen by", ev$cell_source), choices = list(
-                    "Name selected cell subset" = "addmeta",
                     "Zoom in to selected cells" = "zoom", 
+                    "Name selected cell subset" = "addmeta",
                     "Compute new PCA/UMAP with selected cells" = "compdimr",
                     "Download expression data (Monocle cds format) of selected cells" = "downcell",
                     "Download meta data of selected cells" = "downmeta"
@@ -785,8 +803,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                            actionButton(ns("zoom_in"), "Zoom in", class = "btn-primary btn_rightAlign")
                     )
                 ),
-                tags$li("Zoom out by click top right reset button."),
-                tags$li("If name provided, a new sample subset will be created.")
+                tags$li("Provide a name to create a new visualization (sample)."),
+                tags$li("Zoom out by click topright reset button.")
             ),
             conditionalPanel(
                 "input.selectCell_goal == 'downcell' || input.selectCell_goal == 'downmeta'", ns=ns,
@@ -893,6 +911,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         }
         showNotification(paste("New meta class:",  rval$group_name, "added"), type="message", duration=10)
         updateSelectInput(session, "proj_colorBy", "Color By", selected = rval$mclass)
+        updateSelectInput(session, "selectCell_goal", selected = "addmeta")
         updateSelectInput(session, "selectCell_meta_col", "Meta Class", selected = rval$mclass)
     })
 
@@ -945,8 +964,10 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     output$g_limit_ui <- renderUI({
         ns <- session$ns
         input$plot_config_reset
+        req(input$gene_list)
         if(length(input$gene_list) == 1) {
             glim <- round(quantile(ev$gene_values[,1], .975),1)
+            if(!is.na(glim) && glim <  2) glim = 2
             dropdownButton2(inputId=ns("val_cutoff"),
                             width = "500px",
                             plotOutput(ns("gene_histogram_plot")),
@@ -1005,6 +1026,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         req(ev$cells)
         if(input$zoom_name == "") {
             pvals$proj <- ev$proj[ev$cells,]
+            factor_breaks <- waiver()
+            if(pvals$proj_colorBy %in% ev$factor_cols) {
+                if(input$proj_colorBy %in% c("cell.type", "cell.subtype")) {
+                    factor_breaks <- names(which(table(pvals$proj[[pvals$proj_colorBy]]) >= 10)) 
+                } else {
+                    factor_breaks <- unique(pvals$proj[[pvals$proj_colorBy]])
+                }
+                factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
+            } 
+            pvals$factor_breaks <- factor_breaks
             if(!is.null(ev$gene_values)) pvals$gene_values <- ev$gene_values[ev$cells,, drop=F]
             return()
         }
@@ -1090,7 +1121,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
     })
     
-    updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
+    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
     
     output$bp_sample_ui <- renderUI({
         ns <- session$ns
@@ -1118,14 +1149,18 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     
     
     # The follwoing observers control the syncing between explorer gene input and feature plot gene input
-    observe({
-        req(!is.null(input$gene_list) & length(input$gene_list) == 1)
-        updateSelectInput(session, "bp_gene", selected = input$gene_list)
+    observeEvent(input$gene_list, {
+        req(length(input$gene_list) == 1)
+        if(is.null(input$bp_gene) || input$gene_list != input$bp_gene) {
+            updateSelectInput(session, "bp_gene", selected = input$gene_list)
+        }
     })
     
-    observe({
-        req(!is.null(input$bp_gene))
-        updateSelectInput(session, "gene_list", selected = input$bp_gene)
+    observeEvent(input$bp_gene, {
+        req(input$bp_gene, input$bp_gene != "No gene selected")
+        if(is.null(input$gene_list) || input$bp_gene != input$gene_list) {
+            updateSelectInput(session, "gene_list", selected = input$bp_gene)
+        }
     })
     
     
@@ -1189,7 +1224,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     })
     
     bp1 <- reactive({
-        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected")
+        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% gene_symbol_choices)
         req(ev$sample == input$bp_sample, ev$sample == input$bp_include_I) # IMPORTANT, this controls the sync between sample choices in the explorer and the featurePlot, and prevent double rendering
         cur_group <- ev$meta[[input$bp_colorBy]]
         # Downsample cells from each cell type
@@ -1232,6 +1267,75 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     output$bp_gene_plot <- renderPlot({
         req(bp1())
         bp1()
+    })
+    
+    
+    
+    
+    ############### Cell Type Marker Table #############
+    
+    #################### Cell type marker table #################
+    #proxy = dataTableProxy('ct_marker_tbl')
+    shinyInput <- function(FUN, id, ...) {
+        as.character(FUN(id, ...))
+    }
+    
+    output$ct_marker_tbl <- DT::renderDataTable({
+        ns <- session$ns
+        cell_type_markers$Marker.genes <- lapply(1:nrow(cell_type_markers), function(i) {
+            x <- as.character(cell_type_markers$Marker.genes[i])
+            genes<-trimws(unlist(strsplit(x, ",")), which = "both")
+            #assign("ns1", ns, env=.GlobalEnv)
+            btns <- paste(
+                sapply(genes, function(g){
+                    shinyInput(actionLink, row = i, id = paste0(g,'_', i), label = g, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("ct_gene"),  "\", this.id)"))
+                }),
+                collapse = ",&nbsp")
+            return(btns)
+        })
+        #assign("ns1", session$ns, env=.GlobalEnv)
+        cell_type_markers$UMAP <- lapply(1:nrow(cell_type_markers), function(i) {
+            x <- as.character(cell_type_markers$UMAP[i])
+            shinyInput(actionLink, row = i, id = paste0(x,'_', i), label = x, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("ct_umap"),  "\", this.id)"))
+        })
+        
+        DT::datatable(cell_type_markers, selection = 'none',
+                      rownames=F, 
+                      editable = F, 
+                      options = list(
+                          searching=T, 
+                          scrollX = TRUE,
+                          columnDefs = list(list(width = '20%', targets = list(0,1,2)))
+                      )
+        ) %>%
+            DT::formatStyle(columns = c(1),fontWeight = 'bold')
+    })
+    
+    
+    observeEvent(input$ct_gene, {
+         gene_row <- unlist(strsplit(as.character(input$ct_gene), "_", fixed = T))
+         if(length(gene_row) != 2) {
+             return()
+         }
+         gene <- gene_row[1]
+         row <- as.numeric(gene_row[2])
+         umap_id <- cell_type_markers$UMAP[row]
+         
+         updateTabsetPanel(session, "core_tab", selected = "eui")
+         updateSelectInput(session, "input_sample", selected = umap_id)
+         updateSelectizeInput(session, "proj_colorBy", selected = "gene.expr")
+         updateSelectInput(session, "gene_list", selected = gene)
+    })
+    
+    observeEvent(input$ct_umap, {
+        umap_row <- unlist(strsplit(as.character(input$ct_umap), "_", fixed = T))
+        if(length(umap_row) != 2) {
+            return()
+        }
+        row <- as.numeric(umap_row[2])
+        umap_id <- cell_type_markers$UMAP[row]
+        updateTabsetPanel(session, "core_tab", selected = "eui")
+        updateSelectInput(session, "input_sample", selected = umap_id)
     })
     
     

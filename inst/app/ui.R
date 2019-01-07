@@ -58,17 +58,6 @@ function() {
             ),
             explorer_ui("main"),
             
-            # tabPanel(
-            #     tags$b("Cell Type Marker"),
-            #     tags$br(),
-            #     fluidRow(
-            #         column(3, textInputCode("ct_lineage", "Search Lineage:", placeholder = "lineage name substring")),
-            #         column(3, textInputCode("ct_cell", "Search Cell:", placeholder = "cell name substring")),
-            #         column(3, textInputCode("ct_tissue", "Search Tissue:", placeholder = "tissue cluster")),
-            #         column(3, textInputCode("ct_marker", "Search Gene:", placeholder = "gene name"))
-            #     ),
-            #     DT::dataTableOutput("ct_marker_tbl")
-            # )
             tags$br(),
             tags$br(),
             tags$br(),
@@ -89,74 +78,31 @@ function() {
             ),
             tabPanel(
                 tags$b("Marker Imaging"),
-                wellPanel(
-                    fluidRow(
-                        column(3, selectInput("image_colorBy", "Color by", choices = image_colorBy_choices)),
-                        column(3, selectInput("image_pal", "Palette", choices=numeric_palettes)),
-                        column(3, numericInput("image_ploth", "Plot Height", min=1, value = 10, step=1)),
-                        column(3, numericInput("image_plotw", "Plot Width", min=1, value = 7, step=1))
+                fluidRow(
+                    column(4,
+                           wellPanel(
+                               selectInput("image_colorBy", "Color by", choices = image_colorBy_choices),
+                               selectInput("image_pal", "Palette", choices=image_palettes),
+                               numericInput("image_ploth", "Plot Height", min=1, value = 7, step=1),
+                               tags$br(),
+                               tagList(tags$strong("EPiC Movies: "), tags$a("http://epic.gs.washington.edu/", href="http://epic.gs.washington.edu/")),
+                               tagList(tags$strong("EPiC2 Movies: "), tags$a("http://epic.gs.washington.edu/Epic2/", href="http://epic.gs.washington.edu/Epic2/"))
+                           ),
+                           fluidRow(
+                               column(12, tags$p("Expression level summarized from following sources:"))
+                           ),
+                           DT::dataTableOutput("g_meta_table")
+                    ), 
+                    column(8, 
+                           uiOutput("image_graph_plot_ui")
                     )
-                ),
-                uiOutput("image_graph_plot_ui")
+                )
             )
         )
     ),
     tabPanel(
-        "Differential Expression"
-    ),
-
-    tabPanel(
-        "Dynamic Pattern",
-        tabsetPanel(
-            tabPanel(
-                tags$b("Global Dynamic Pattern:"),
-                width = 12,
-                fluidRow(
-                    column(4, selectInput("dynamic_barplot_type", "Plot global pattern:", choices = list("Number of Expressed Genes per Cell" = "num.genes.expressed", "Number of UMI per Cell" = "n.umi"))),
-                    column(4, selectInput("dynamic_barplot_scale", "Data scale:", choices = c("log10", "identity"))),
-                    column(4, numericInput("dynamic_barplot_bin", "Number of time bin:", value = 30, step = 1, min = 2))
-                ),
-                plotOutput("dynamic_gene_num_barplot"),
-                hr(),
-                tags$b("Temporal Composition Change:"),
-                tags$br(),
-                fluidRow(
-                    column(12, plotlyOutput("meta_line_tt"))
-                )
-            ),
-            tabPanel(
-                tags$b("Cell Type Differentiation"),
-                fluidRow(
-                    column(6,
-                           fluidRow(
-                               column(6, selectInput("dy_ctype_choice", "Cell Type", choices = names(time_umap_list))),
-                               column(6, selectizeInput("dy_ctype_gene", "Search Gene:", NULL, multiple = T))
-                           ),
-                           plotOutput("dy_proj_show")
-                    ),
-                    column(6,
-                           fluidRow(
-                               column(6, numericInput("dy_hmap_ngene", "# Genes", value = 50, min = 2, max = 500)),
-                               column(6, numericInput("dy_hmap_ecut", "Min Expr", value = 0.1, min = 0))
-                           ),
-                           plotOutput("dy_hmap_show")
-                    )
-                ),
-                fluidRow(
-                    column(12, DT::dataTableOutput("dy_de_tbl"))
-                ),
-                fluidRow(
-                    column(6),
-                    column(3, checkboxInput("dy_filter_tf", "Filter for TFs", value = F)),
-                    column(3, downloadButton("download_dy_res", "Download DE Table", class = "btn_rightAlign"))
-                )
-
-
-            )
-            # tabPanel(
-            #     tags$b("Branch Point Analysis")
-            # )
-        )
+        "Differential Expression",
+        de_ui("cel")
     ),
     tabPanel(
         "Tutorial",

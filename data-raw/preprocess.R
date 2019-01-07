@@ -35,6 +35,11 @@ names(clist_cvis) <- names(clist)
 clist <- clist_cvis
 
 
+names(clist)[which(names(clist) == "Early Embryo Germline Rectum")] <- "Early Embryo, Germline and Rectum"
+names(clist)[which(names(clist) == "Non Ciliated Neurons")] <- "Non-Ciliated Neurons"
+names(clist) <- tools::toTitleCase(names(clist))
+
+
 keep_elist <- c(
     "Time 150min Lineage"="time150_disp1_bc_regress", 
     "Time 200min Lineage"="time200_disp1_bc_regress", 
@@ -156,14 +161,43 @@ pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor", "raw.embryo.tim
 pData(all_cds) <- pData(all_cds)[,which(colnames(pData(all_cds)) %in% colorby_order)]
 
 
+
+
+# Load Sup Table S1 and modify
+ct_marker_tbl <- read.csv("data-raw/Table S1_ marker genes for terminal cell types - Sheet1.csv")
+ct_marker_tbl$X <- NULL
+cell_type_markers <- ct_marker_tbl
+cur_umap_names<-as.character(unique(cell_type_markers$UMAP))
+names(cur_umap_names) <- cur_umap_names
+cur_umap_names<-tools::toTitleCase(cur_umap_names)
+cur_umap_names[which(!cur_umap_names %in% names(clist))]
+cur_umap_names["Hypodermis and seam cells"] <- "Hypodermis and Seam"
+cur_umap_names["Early embryo, germline, and rectum"] <- "Early Embryo, Germline and Rectum"
+cur_umap_names[which(!cur_umap_names %in% names(clist))]
+
+cell_type_markers$UMAP <- cur_umap_names[as.character(cell_type_markers$UMAP)]
+
+
+# Graph plot
+
+graph_genes <- graph_genes[order(graph_genes)]
+g_meta_list<- readRDS("data-raw/image_gene_meta_list.rds")
+g_meta_list <- lapply(g_meta_list, function(x) {
+    colnames(x) <- c("Gene", "Series", "Allele", "Strain", "Reporter type", "Data source")
+    x$Gene <- NULL
+    x[["Data source"]][which(x[["Data source"]] == "EPIC")] <- "EPiC"
+    x <- x[,c("Series", "Reporter type", "Strain", "Allele", "Data source")]
+    return(x)
+})
+
 usethis::use_data(clist, overwrite = T)
 usethis::use_data(elist, overwrite = T)
 usethis::use_data(all_cds, overwrite = T)
 usethis::use_data(pmeta_attr, overwrite = T)
 
 usethis::use_data(g_all, overwrite = T)
-usethis::use_data(time_umap_list, overwrite = T)
-usethis::use_data(time_deg_list, overwrite = T)
+usethis::use_data(g_meta_list, overwrite = T)
+
 usethis::use_data(tf_tbl, overwrite = T)
 usethis::use_data(cell_type_markers, overwrite = T)
 usethis::use_data(graph_genes, overwrite = T)

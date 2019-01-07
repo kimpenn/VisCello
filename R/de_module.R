@@ -1,125 +1,123 @@
 
 
 
-
-
-
+#' @export
 de_ui <- function(id) {
     ns <- NS(id)
     tagList(
         wellPanel(
             fluidRow(
-                column(3, uiOutput("de_sample_ui")),
-                column(3, uiOutput("de_metaclass_ui")),
-                uiOutput("de_g1_ui"),
-                uiOutput("de_g2_ui")
+                column(3, uiOutput(ns("de_sample_ui"))),
+                column(3, uiOutput(ns("de_metaclass_ui"))),
+                uiOutput(ns("de_g1_ui")),
+                uiOutput(ns("de_g2_ui"))
             ),
             fluidRow(
-                column(8, uiOutput("cur_de_group")),
+                column(8, uiOutput(ns("cur_de_group"))),
                 column(4,
-                       actionButton("run_de", "Run DE", class = "btn-info btn_rightAlign"),
-                       uiOutput("add_clus_ui"),
-                       uiOutput("downsample_de_ui")
+                       actionButton(ns("run_de"), "Run DE", class = "btn-info btn_rightAlign"),
+                       uiOutput(ns("add_clus_ui")),
+                       uiOutput(ns("downsample_de_ui"))
                 )
             )
         ),
         fluidRow(
             column(5,
                    fluidRow(
-                       column(8, uiOutput("de_proj_type_ui")),
+                       column(8, uiOutput(ns("de_proj_type_ui"))),
                        column(4,
-                              circleButton("de_plot_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                              circleButton(ns("de_plot_config_reset"), icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
                               shinyBS::bsTooltip(
-                                  "de_plot_config_reset",
+                                  ns("de_plot_config_reset"),
                                   title = "Reset plot configuration",
                                   options = list(container = "body")
                               ),
-                              uiOutput("de_plot_configure_ui")
+                              uiOutput(ns("de_plot_configure_ui"))
                        )
                    ),
-                   uiOutput("de_plot2d_ui"),
-                   materialSwitch(inputId = "interactive_de_plot", tags$b("interactive"), value = F, status = "success"),
+                   plotOutput(ns("de_plot2d"), height = "450px", hover = hoverOpts(id = ns("plot2d_hover"), delay = 50)),
+                   uiOutput(ns("plot2d_tooltip")),
+                   tags$p("Hint: Mouse over points to see label."),
                    tags$br(),
-                   DT::dataTableOutput("deg_summary")
+                   DT::dataTableOutput(ns("deg_summary"))
             ),
             column(7,
                    fluidRow(
                        column(12,
-                              circleButton("hmap_config_reset", icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
+                              circleButton(ns("hmap_config_reset"), icon = icon("undo"), size = "xs", status = "danger btn_rightAlign"),
                               shinyBS::bsTooltip(
-                                  "hmap_config_reset",
+                                  ns("hmap_config_reset"),
                                   title = "Reset heatmap configuration",
                                   options = list(container = "body")
                               ),
-                              uiOutput("hmap_configure_ui")
+                              uiOutput(ns("hmap_configure_ui"))
                        )
                    ),
-                   uiOutput("de_hmap_ui"),
+                   uiOutput(ns("de_hmap_ui"))%>% withSpinner(),
                    fluidRow(
-                       column(6, materialSwitch(inputId = "interactive_hmap", tags$b("interactive"), value = F, status = "success")),
-                       column(6, uiOutput("download_hmap_ui"))
+                       column(6, materialSwitch(inputId = ns("interactive_hmap"), tags$b("interactive"), value = F, status = "success")),
+                       column(6, uiOutput(ns("download_hmap_ui")))
                    )
             )
         ),
         tags$hr(),
         fluidRow(
             column(12,
-                   uiOutput("deg_tabs"),
-                   uiOutput("download_de_res_ui")
+                   uiOutput(ns("deg_tabs")),
+                   uiOutput(ns("download_de_res_ui"))
             )
         ),
         tags$hr(),
         fluidRow(
             column(12,
-                   uiOutput("go_ui")
+                   uiOutput(ns("go_ui"))
             )
         )
     )
 }
 
-
-de_server <- function(input, output, session){
+#' @export
+de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
     ################################# DE Module ###################################
     
     des <- reactiveValues()
+    de_res <- reactiveValues()
+    reset_idx <- reactiveValues(g1=0, g2=0)
+    de_idx <- reactiveValues(idx_list = list(NA, NA), group = list(NA, NA), group_name = c("", ""))
     
     ############ Interactive UI for adding new groups for comparison ###################
     
     output$de_metaclass_ui <- renderUI({
-        options <- cmeta$factor_cols[!cmeta$factor_cols %in% c("time.point", "batch", "to.filter")]
-        selectInput("de_metaclass", "Meta Class", choices = options)
+        ns <- session$ns
+        req(des$meta_options)
+        selectInput(ns("de_metaclass"), "Meta Class", choices = des$meta_options)
     })
     
     output$de_g1_ui <- renderUI({
-        req(input$de_metaclass, des$meta)
+        req(input$de_metaclass, des$meta, des$groups)
+        ns <- session$ns
         reset_idx$g1
-        groups <- as.character(levels(factor(des$meta[[input$de_metaclass]])))
-        groups <- groups[!is.na(groups) & groups!="NA"]
         tagList(
-            column(3, selectInput("de_g1_group", "Group 1", choices = groups, multiple = T))
+            column(3, selectInput(ns("de_g1_group"), "Group 1", choices = des$groups, multiple = T))
         )
     })
     
     output$de_g2_ui <- renderUI({
-        req(input$de_metaclass, des$meta)
+        ns <- session$ns
+        req(input$de_metaclass, des$meta, des$groups)
         reset_idx$g2
-        groups <- as.character(levels(factor(des$meta[[input$de_metaclass]])))
-        groups <- groups[!is.na(groups) & groups!="NA"]
         tagList(
-            column(3, selectInput("de_g2_group", "Group 2", choices = groups, multiple = T))
+            column(3, selectInput(ns("de_g2_group"), "Group 2", choices = des$groups, multiple = T))
         )
     })
     
-    
-    
     output$add_clus_ui <- renderUI({
+        ns <- session$ns
         req(input$de_metaclass, des$meta)
         input$de_new_add
-        groups <- as.character(levels(factor(des$meta[[input$de_metaclass]])))
-        groups <- groups[!is.na(groups) & groups!="NA"]
         dropdownButton2(inputId="add_clus",
-                        selectInput("de_new_group", "Group", choices = groups, multiple = T),
-                        actionButton("de_new_add", "Add Group", icon = icon("plus-circle"), class = "btn-danger btn_rightAlign"),
+                        selectInput(ns("de_new_group"), "Group", choices = des$groups, multiple = T),
+                        actionButton(ns("de_new_add"), "Add Group", icon = icon("plus-circle"), class = "btn-danger btn_rightAlign"),
                         circle = T, label ="Add Another Group", tooltip=T, right = T,
                         icon = icon("plus"), size = "sm", status="primary", class = "btn_rightAlign")
     })
@@ -131,20 +129,22 @@ de_server <- function(input, output, session){
         groups <- des$meta[[input$de_metaclass]]
         gname <- c(paste0(input$de_new_group, collapse="_"))
         de_idx$idx_list[[length(de_idx$idx_list) + 1]] <- des$vis@idx[which(groups %in% input$de_new_group)]
+        de_idx$group[[length(de_idx$group) + 1]] <- if(!is.null(input$de_new_group)) input$de_new_group else NA
         de_idx$group_name <- c(de_idx$group_name,gname)
     })
     
     
     output$cur_de_group <- renderUI({
+        ns <- session$ns
         group <- de_idx$group_name
         group <- group[!group == ""]
         if(length(group) !=0) {
-            checkboxGroupButtons(inputId = "remove_group", label = NULL, choices = group, individual = T,  status = "danger",
+            checkboxGroupButtons(inputId = ns("remove_group"), label = NULL, choices = group, individual = T,  status = "danger",
                                  checkIcon = list(yes = icon("remove", lib = "glyphicon"), no = icon("remove", lib = "glyphicon")))
         } else {
             tagList(
                 tags$br(),
-                actionLink("howtode", "How to run DE")
+                actionLink(ns("howtode"), "How to run DE")
             )
         }
     })
@@ -172,6 +172,8 @@ de_server <- function(input, output, session){
             groups <- des$meta[[input$de_metaclass]]
             de_idx$idx_list[[1]] <- des$vis@idx[which(groups %in% input$de_g1_group)]
             de_idx$idx_list[[2]] <- des$vis@idx[which(groups %in% input$de_g2_group)]
+            de_idx$group[[1]] <- if(!is.null(input$de_g1_group)) input$de_g1_group else NA
+            de_idx$group[[2]] <- if(!is.null(input$de_g2_group)) input$de_g2_group else NA
             de_idx$group_name[1] <-c(paste0(input$de_g1_group, collapse="_"))
             de_idx$group_name[2] <-c(paste0(input$de_g2_group, collapse="_"))
         })
@@ -179,12 +181,14 @@ de_server <- function(input, output, session){
     
     observe({
         req(input$de_metaclass)
-        group <- de_idx$group_name
-        group <- group[!group == ""]
-        if(length(group) == 1) {
+        group_name <- de_idx$group_name
+        gid <- which(group_name != "")
+        group_name <- group_name[gid]
+        if(length(group_name) == 1) {
             isolate({
+                cur_group <- de_idx$group[[gid]]
                 groups <- des$meta[[input$de_metaclass]]
-                de_idx$idx_list[[which(de_idx$group_name == "")[1]]] <- des$vis@idx[which(!groups %in% group)]
+                de_idx$idx_list[[which(de_idx$group_name == "")[1]]] <- des$vis@idx[which(!groups %in% cur_group)]
             })
         } else {
             isolate({
@@ -194,21 +198,22 @@ de_server <- function(input, output, session){
     })
     
     output$downsample_de_ui <- renderUI({
+        ns <- session$ns
         group <- de_idx$group_name
         group <- group[!group == ""]
         if(length(group) == 1) {
-            dropdownButton2(inputId="downsample_background",
-                            numericInput("de_pval_cutoff", "P value cutoff", value = 0.01),
-                            numericInput("downsample_gp_num", "Max Cell # in subset", value = 200),
-                            numericInput("downsample_bg_num", "Max Cell # in background", value = 1000),
-                            actionButton("downsample_de_bg", "Downsample Cells", class = "btn_rightAlign"),
+            dropdownButton2(inputId=ns("downsample_background"),
+                            numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
+                            numericInput(ns("downsample_gp_num"), "Max Cell # in subset", value = 200),
+                            numericInput(ns("downsample_bg_num"), "Max Cell # in background", value = 1000),
+                            actionButton(ns("downsample_de_bg"), "Downsample Cells", class = "btn_rightAlign"),
                             circle = T, label ="DE configuration", tooltip=T, right = T,
                             icon = icon("angle-double-down"), size = "sm", status="success", class = "btn_rightAlign")
         } else {
-            dropdownButton2(inputId="downsample_group",
-                            numericInput("de_pval_cutoff", "P value cutoff", value = 0.01),
-                            numericInput("downsample_num", "Max Cell # per Group", value = 200),
-                            actionButton("downsample_de", "Downsample Cells", class = "btn_rightAlign"),
+            dropdownButton2(inputId=ns("downsample_group"),
+                            numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
+                            numericInput(ns("downsample_num"), "Max Cell # per Group", value = 200),
+                            actionButton(ns("downsample_de"), "Downsample Cells", class = "btn_rightAlign"),
                             circle = T, label ="DE configuration", tooltip=T, right = T,
                             icon = icon("angle-double-down"), size = "sm", status="success", class = "btn_rightAlign")
         }
@@ -240,12 +245,13 @@ de_server <- function(input, output, session){
             if(length(remove_idx)) {
                 if(remove_idx %in% c(1,2)) {
                     de_idx$idx_list[remove_idx] <- NA
+                    de_idx$group[remove_idx] <- NA
                     de_idx$group_name[remove_idx] <- ""
-                    clusters <- as.character(des$meta$Cluster)
                     if(remove_idx == 1) reset_idx$g1 <-reset_idx$g1+1
                     if(remove_idx == 2) reset_idx$g2 <-reset_idx$g2+1
                 } else {
                     de_idx$idx_list[remove_idx] <- NULL
+                    de_idx$group[remove_idx] <- NA
                     de_idx$group_name <- de_idx$group_name[-remove_idx]
                 }
             }
@@ -254,21 +260,22 @@ de_server <- function(input, output, session){
     
     
     output$de_sample_ui <- renderUI({
-        options <- c(names(usr$clist), names(usr$elist))
-        selectInput("de_sample", "Choose Sample:", choices=options)
+        ns <- session$ns
+        options <- c(names(sclist$clist), names(sclist$elist))
+        selectInput(ns("de_sample"), "Choose Sample:", choices=options)
     })
     
     observe({
         req(input$de_sample)
         sample <- input$de_sample
-        cur_list <- c(usr$clist,usr$elist)
+        cur_list <- c(sclist$clist,sclist$elist)
         idx <- cur_list[[sample]]@idx
         cur_meta <-  cmeta$df[idx,]
-        if(length(cur_list[[sample]]@cluster) > 0){
-            cur_meta$Cluster <- as.character(cur_list[[sample]]@cluster)
-        }
-        des$meta <- cur_meta
         des$vis <- cur_list[[sample]]
+        if(!is.null(des$vis@pmeta) && nrow(des$vis@pmeta) == nrow(cur_meta)) cur_meta <- cbind(cur_meta, des$vis@pmeta)
+        des$meta <- cur_meta
+        des$meta_options <- c(de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% ctype_cols_advanced)])
+        #assign("des", reactiveValuesToList(des), env=.GlobalEnv)
     })
     
     observe({
@@ -279,36 +286,63 @@ de_server <- function(input, output, session){
         })
     })
     
+    observe({
+        req(des$meta, input$de_metaclass)
+        isolate({
+            factor_breaks <- unique(des$meta[[input$de_metaclass]])
+            if(input$de_metaclass %in% c("cell.type", "cell.subtype")) {
+                factor_breaks <- names(which(table(des$meta[[input$de_metaclass]]) >= 10)) 
+            } 
+            factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
+            des$groups <- factor_breaks
+        })
+    })
+    
     output$de_plot_configure_ui <- renderUI({
+        ns <- session$ns
         input$de_plot_config_reset
-        dropdownButton2(inputId="de_plot_configure",
-                        selectInput("de_plot_color_pal", "Color palette", choices=factor_palettes),
-                        numericInput("de_plot_alpha_level", "Transparency", min = 0, max = 1, value = 0.01, step = 0.01),
-                        numericInput("de_plot_marker_size", "Point Size", min = 0.1, max = 5, value = 2, step = 0.1),
-                        selectInput("de_plot_legend_type", "Legend", choices = c("Color Legend", "On-plot Legend", "Both", "None"), selected="On-plot Legend"),
+        dropdownButton2(inputId=ns("de_plot_configure"),
+                        selectInput(ns("de_plot_color_pal"), "Color palette", choices=factor_color_opt()),
+                        numericInput(ns("de_plot_alpha_level"), "Transparency", min = 0, max = 1, value = 0.05, step = 0.01),
+                        numericInput(ns("de_plot_marker_size"), "Point Size", min = 0.1, max = 5, value = 2, step = 0.1),
+                        selectInput(ns("de_plot_legend_type"), "Legend", choices = c("Color Legend" = "l", "On-plot Label" = "ol", "Both" = "lol", "None" = "none"), selected="none"),
                         circle = T, label ="Configure Plot", tooltip=T, right = T,
                         icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
     })
     
     
-    output$de_plot2d_ui <- renderUI({
-        if(input$interactive_de_plot) {
-            plotlyOutput("de_plotly", height = "450px")
-        } else {
-            plotOutput("de_plot2d", height = "450px")
-        }
-    })
     
     output$de_proj_type_ui <- renderUI({
+        ns <- session$ns
         req(des$vis)
         options <- names(des$vis@proj)
-        options <- options[!options == "PCA"]
-        selectInput("de_proj_type", NULL, choices=options)
+        options <- options[options != "PCA" & !grepl("3D", options)]
+        selectInput(ns("de_proj_type"), NULL, choices=options)
     })
     
     output$de_plot2d <- renderPlot({
         req(pp2())
         pp2()
+    })
+    
+    output$plot2d_tooltip <- renderUI({
+        ns <- session$ns
+        hover <- input$plot2d_hover
+        #assign("hover", hover, env=.GlobalEnv)
+        x <- nearPoints(des$proj, hover, maxpoints = 1)
+        req(nrow(x) > 0)
+        y <- as.character(x[[input$de_metaclass]])
+        tip <- y
+        req(length(y) > 0)
+        style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.65); ",
+                        "left:", hover$coords_css$x + 2, "px; top:", hover$coords_css$y + 2, "px;",
+                        "margin:5px; padding:5px 5px 0px 5px;")
+        
+        # actual tooltip created as wellPanel
+        wellPanel(
+            style = style,
+            p(HTML(tip))
+        )
     })
     
     output$de_plotly <- renderPlotly({
@@ -338,9 +372,37 @@ de_server <- function(input, output, session){
         } else {
             aidx <- Reduce(union, de_idx$idx_list)
         }
+        req(nrow(proj) == length(idx))
         proj$alpha <- ifelse(idx %in% aidx, "f", "t")
-        if(input$de_plot_legend_type == "Both") {legend=T; onplotText=T} else if(input$de_plot_legend_type == "Color Legend") {legend=T; onplotText=F} else if(input$de_plot_legend_type == "On-plot Legend"){legend=F; onplotText=T} else {legend=T; onplotText=T}
-        plotProj(proj, dim_col = c(1,2), group.by=input$de_metaclass, pal=input$de_plot_color_pal, size = input$de_plot_marker_size, plot_title=NULL, legend_title = NULL, na_col = "lightgrey", alpha=proj$alpha, alpha_level=input$de_plot_alpha_level, legend=legend, onplotText = onplotText, onplotTextSize = 3)
+        
+        legend_type <- input$de_plot_legend_type
+        legend=F; onplotAnnot=NULL
+        if(!is.null(legend_type)) {
+            if(legend_type == "l") {
+                legend=T; onplotAnnot=NULL
+            } else if(legend_type == "lot") {
+                legend=T; onplotAnnot="text"
+            } else if(legend_type == "lol") {
+                legend=T; onplotAnnot="label"
+            } else if(legend_type == "ot"){
+                legend=F; onplotAnnot="text"
+            } else if(legend_type == "ol"){
+                legend=F; onplotAnnot="label"
+            }
+        } 
+        
+        factor_color <- get_factor_color(unique(proj[[input$de_metaclass]]), pal=input$de_plot_color_pal, maxCol = 9)
+        names(factor_color) <- unique(proj[[input$de_metaclass]])
+        factor_color[["unannotated"]] <- "lightgrey"
+        
+        if(input$de_metaclass %in% c("cell.type", "cell.subtype")) {
+            factor_breaks <- names(which(table(proj[[input$de_metaclass]]) >= 10)) 
+        } else {
+            factor_breaks <- names(factor_color)
+        }
+        factor_breaks <- factor_breaks[factor_breaks != "unannotated"]
+        
+        plotProj(proj, dim_col = c(1,2), group.by=input$de_metaclass, pal=factor_color, size = input$de_plot_marker_size, plot_title=NULL, legend.title = NULL, na.col = "lightgrey", alpha=proj$alpha, alpha_level=input$de_plot_alpha_level, legend=legend, onplotAnnot = onplotAnnot, onplotAnnotSize = 3, legend.text.size = 3, breaks = factor_breaks)
     })
     
     observeEvent(input$run_de,{
@@ -385,6 +447,9 @@ de_server <- function(input, output, session){
         de_list <- lapply(prioritized_genes, function(x) {
             x %>% dplyr::filter(significant == TRUE) %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
         })
+        updateSelectInput(session, "de_hmap_colorBy", selected = input$de_metaclass)
+        de_res$sample <- input$de_sample
+        de_res$metaclass <- input$de_metaclass
         de_res$test_idx <- test_idx
         de_res$test_group <- test_group
         de_res$test_clus <- test_clus
@@ -411,32 +476,35 @@ de_server <- function(input, output, session){
     
     
     output$de_hmap_ui <- renderUI({
+        ns <- session$ns
         req(de_res$deg)
         if(input$interactive_hmap) {
-            plotlyOutput("de_hmaply", height="600px")
+            plotlyOutput(ns("de_hmaply"), height="600px") 
         } else {
-            plotOutput("de_hmap", height="600px")
+            plotOutput(ns("de_hmap"), height="600px") 
         }
     })
     
     
     output$hmap_configure_ui <- renderUI({
+        ns <- session$ns
         input$hmap_config_reset
-        dropdownButton2(inputId="hmap_configure",
+        dropdownButton2(inputId=ns("hmap_configure"),
                         fluidRow(
-                            column(6, selectInput("de_hmap_colorBy", "Heatmap Color By", choices = c("Group",cmeta$factor_cols)))
+                            column(6, selectInput(ns("de_hmap_colorBy"), "Heatmap Color By", choices = des$meta_options)),
+                            column(6, selectInput(ns("de_hmap_scale"), "Data scale", choices = c("Log2 normalized count"="log2", "Raw count" = "raw")))
                         ),
                         fluidRow(
-                            column(6, selectInput("hmap_color_pal", "Heatmap Color", choices=numeric_palettes)),
-                            column(6, numericInput("hmap_numg", "Max #DEG/Group", min=2, max = 500, value = 50, step=1))
+                            column(6, selectInput(ns("hmap_color_pal"), "Heatmap Color", choices=heatmap_palettes)),
+                            column(6, numericInput(ns("hmap_numg"), "Max #DEG/Group", min=2, max = 500, value = 30, step=1))
                         ),
                         fluidRow(
-                            column(6, selectInput("hmap_dscale", "Data Scale", choices=list("scaled log2" = "scaled log2", "log2"="log2"))),
-                            column(6, numericInput("hmap_pseudoc", "Pseudocount", min=1e-5, max = 1, value = 1, step=1e-3))
+                            column(6, selectInput(ns("hmap_dscale"), "Data Scale", choices=list("scaled log2" = "scaled log2", "log2"="log2"))),
+                            column(6, numericInput(ns("hmap_pseudoc"), "Pseudocount", min=1e-5, max = 1, value = 1, step=1e-3))
                         ),
                         fluidRow(
-                            column(6, numericInput("hmap_limitlow", "Expr Limit Low", value = -2, step=1)),
-                            column(6, numericInput("hmap_limithigh", "Expr Limit High", value = 2, step=1))
+                            column(6, numericInput(ns("hmap_limitlow"), "Expression z-score cutoff low", value = -2, step=1)),
+                            column(6, numericInput(ns("hmap_limithigh"), "Expression z-score cutoff high", value = 2, step=1))
                         ),
                         circle = T, label ="Configure Heatmap", tooltip=T, right = T,
                         icon = icon("cog"), size = "xs", status="primary", class = "btn_rightAlign")
@@ -445,32 +513,23 @@ de_server <- function(input, output, session){
     observe({
         req(de_res$deg, input$hmap_dscale)
         if(sum(sapply(de_res$de_list, nrow)) == 0) return()
-        cur_list <- c(clist,elist)
+        cur_list <- c(sclist$clist,sclist$elist)
         #isolate({
         # Color bar on top of heatmap
+        #assign("de_res", reactiveValuesToList(de_res), env =.GlobalEnv)
         de_res$cells_to_plot <- order_cell_by_clusters2(cmeta$df[de_res$test_idx,], de_res$test_clus)
         if(input$de_hmap_colorBy == "Group") {
             de_res$plot_group = NULL
             de_res$group_colour=NULL
         } else {
-            sample <- input$de_sample
+            sample <- de_res$sample
             idx <- cur_list[[sample]]@idx
-            cur_meta <- cmeta$df[idx,]
-            cur_meta$Cluster <- cur_list[[sample]]@cluster
-            if(input$de_hmap_colorBy %in% cmeta$factor_cols) {
-                pal = input$de_plot_color_pal
-                cur_factor <- cur_meta[[input$de_hmap_colorBy]]
-                de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
-                unique_factors <- as.character(unique(cur_factor))
-                factor_color <- get_factor_color(unique_factors, pal=pal, maxCol = 9)
-                names(factor_color) <- unique_factors
-            } else if(input$de_hmap_colorBy == "BestTime"){
-                pal ="RdYlBu" # Temporary use this for time for heatmap, otherwise could be complicated to implement
-                cur_factor <- factor(cur_meta[[input$de_hmap_colorBy]])
-                de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
-                unique_factors <- as.character(levels(cur_factor))
-                factor_color <- rev(get_factor_color(unique_factors, pal=pal, maxCol = 9))
-            }
+            cur_factor <- cmeta$df[idx,][[input$de_hmap_colorBy]]
+            unique_factors <- unique(cur_factor)
+            de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
+            factor_color <- get_factor_color(unique_factors, pal=input$de_plot_color_pal, maxCol = 9)
+            names(factor_color) <- unique_factors
+            factor_color[["unannotated"]] <- "lightgrey"
             de_res$group_colour = factor_color
         }
         # Color of heatmap
@@ -484,8 +543,6 @@ de_server <- function(input, output, session){
         } else if(input$hmap_dscale == "log2") {
             de_res$scale = F
         }
-        # })
-        
     })
     
     output$de_hmap <- renderPlot({
@@ -494,7 +551,12 @@ de_server <- function(input, output, session){
         if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
         if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
         withProgress(message="Rendering heatmap..", {
-            de_res$hmap<-gbm_pheatmap2(all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx],
+            if(input$de_hmap_scale == "log2") {
+                dat <- all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx]
+            } else {
+                dat <- exprs(all_cds)[de_res$feature_idx, de_res$test_idx]
+            }
+            de_res$hmap<-gbm_pheatmap2(dat,
                                        genes_to_plot = de_res$deg,
                                        cells_to_plot=de_res$cells_to_plot,
                                        group=de_res$plot_group,
@@ -502,7 +564,7 @@ de_server <- function(input, output, session){
                                        log=F, pseudocount = input$hmap_pseudoc,
                                        scale = de_res$scale,
                                        heatmap_color = de_res$heatmap_color,
-                                       n_genes=input$hmap_numg, fontsize=6, limits=c(input$hmap_limitlow, input$hmap_limithigh))
+                                       n_genes=input$hmap_numg, fontsize=8, limits=c(input$hmap_limitlow, input$hmap_limithigh))
         })
         grid::grid.draw(de_res$hmap$gtable)
     })
@@ -511,8 +573,13 @@ de_server <- function(input, output, session){
         req(de_res$de_list)
         #assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
         withProgress(message="Rendering heatmap..", {
+            if(input$de_hmap_scale == "log2") {
+                dat <- all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx]
+            } else {
+                dat <- exprs(all_cds)[de_res$feature_idx, de_res$test_idx]
+            }
             return(
-                heatmaply_plot(all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx],
+                heatmaply_plot(dat,
                                genes_to_plot = de_res$deg,
                                cells_to_plot=de_res$cells_to_plot,
                                group=de_res$plot_group,
@@ -534,6 +601,7 @@ de_server <- function(input, output, session){
     
     
     output$deg_tabs <- renderUI({
+        ns <- session$ns
         do.call(
             what = shiny::tabsetPanel,
             args= purrr::map(de_res$test_group,.f = function(nm){
@@ -549,8 +617,9 @@ de_server <- function(input, output, session){
     })
     
     output$download_hmap_ui <- renderUI({
+        ns <- session$ns
         req(de_res$de_list)
-        downloadButton("download_hmap", "Download Heatmap", class = "btn_rightAlign")
+        downloadButton(ns("download_hmap"), "Download Heatmap", class = "btn_rightAlign")
     })
     
     output$download_hmap <- downloadHandler(
@@ -566,11 +635,12 @@ de_server <- function(input, output, session){
     )
     
     output$download_de_res_ui <- renderUI({
+        ns <- session$ns
         req(de_res$deg)
         fluidRow(
             column(6),
-            column(3, checkboxInput("de_filter_tf", "Filter for TFs", value = F)),
-            column(3, downloadButton("download_de_res", "Download DE Table", class = "btn_rightAlign"))
+            column(3, checkboxInput(ns("de_filter_tf"), "Filter for TFs", value = F)),
+            column(3, downloadButton(ns("download_de_res"), "Download DE Table", class = "btn_rightAlign"))
         )
     })
     
@@ -586,22 +656,24 @@ de_server <- function(input, output, session){
     
     
     output$go_ui <- renderUI({
+        ns <- session$ns
         req(de_res$de_list)
         tagList(
             fluidRow(
-                column(4, selectInput("go_type", "Choose Enrichment Type", choices =list("GO-BP" = "BP", "GO-MF" = "MF", "GO-CC" = "CC", "KEGG" = "kegg"))),
-                column(8, tags$p(), actionButton("run_go", "Run Enrichment Analysis", class = "btn-info btn_rightAlign"))
+                column(4, selectInput(ns("go_type"), "Choose Enrichment Type", choices =list("GO-BP" = "BP", "GO-MF" = "MF", "GO-CC" = "CC", "KEGG" = "kegg"))),
+                column(8, tags$p(), actionButton(ns("run_go"), "Run Enrichment Analysis", class = "btn-info btn_rightAlign"))
             ),
             fluidRow(
                 column(12,
-                       uiOutput("go_tabs_ui")
+                       uiOutput(ns("go_tabs_ui"))
                 ),
-                uiOutput("download_go_res_ui")
+                uiOutput(ns("download_go_res_ui"))
             )
         )
     })
     
     output$go_tabs_ui <- renderUI({
+        ns <- session$ns
         do.call(
             what = shiny::tabsetPanel,
             args= purrr::map(de_res$test_group,.f = function(nm){
@@ -634,8 +706,9 @@ de_server <- function(input, output, session){
     
     
     output$download_go_res_ui <- renderUI({
+        ns <- session$ns
         req(de_res$enrich_list)
-        downloadButton("download_go_res", "Download Enrichment Table", class = "btn_rightAlign")
+        downloadButton(ns("download_go_res"), "Download Enrichment Table", class = "btn_rightAlign")
     })
     
     output$download_go_res <- downloadHandler(

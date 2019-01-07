@@ -176,6 +176,8 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
         if(legend) {
             p <- p + 
                 guides(colour = guide_colorbar(title = legend_name))
+        } else {
+            p <- p + guides(colour = F)
         }
         p <- p + theme_bw() + 
             theme(legend.position = c("top"), 
@@ -349,15 +351,18 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
                 data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
             )
         } else {
+            label_data <- proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+            if(length(breaks) > 0) {
+                label_data <- label_data[label_data[[group.by]] %in% breaks,,drop=F]
+            }
             pp<- pp + geom_label(
                 aes_string(
                     label = group.by
-                    #color = group.by
                 ),
                 size = onplotAnnotSize,
                 nudge_x = nudge_x,
                 nudge_y = nudge_y,
-                data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+                data = label_data
             )
         }
     }
@@ -452,13 +457,16 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
 }
 
 #' @export
-plotGraph <- function(g, color.by=NULL, pal=NULL, label=NULL, alpha = NULL, type = NULL, background="grey20", node.text.size = 1) {
+plotGraph <- function(g, color.by=NULL, pal=NULL, label=NULL, alpha = NULL, type = NULL, background="grey20", border.size = 0.1, node.text.size = 1, legend.title = waiver()) {
     p1<-ggraph(g,layout = 'partition', circular = TRUE) +
-        geom_node_arc_bar(aes_string(fill = color.by, alpha=alpha)) +
+        geom_node_arc_bar(aes_string(fill = color.by, alpha=alpha), size = border.size) +
         theme_graph(background = background, text_colour = 'white') +
-        geom_node_text(aes_string(label = label), colour = 'white', vjust = 0.4, size=node.text.size) +
         theme(legend.position = 'top') +
-        guides(alpha=F)
+        guides(alpha=F, size = F, fill = guide_colorbar(title = legend.title))
+    if(!is.null(label)) {
+        p1 <- p1 +geom_node_text(aes_string(label = label, size="text.size"), colour = 'white', vjust = 0.4) 
+    }
+    
     if(type == "numeric") {
         p1<-p1+scale_fill_gradientn(colours = get_numeric_color(pal), na.value="grey20")
     } else{
@@ -467,5 +475,6 @@ plotGraph <- function(g, color.by=NULL, pal=NULL, label=NULL, alpha = NULL, type
     }
     return(p1)
 }
+
 
 
