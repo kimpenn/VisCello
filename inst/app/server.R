@@ -92,72 +92,69 @@ function(input, output, session) {
 
     ################################ Explorer module ##############################
 
-    rval1 <- callModule(explorer_server, id="main",
+    rval_ct <- callModule(explorer_server, id="main",
                         sclist = usr,
                         useid = "clist",
                         #source = "main_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "main_dragselect")),
                         cmeta = cmeta,
                         showcols_basic = ctype_cols_basic,
                         showcols_advanced = ctype_cols_advanced,
-                        onlyEUI = F
+                        tabset = "ct"
     )
 
-    rval2 <- callModule(explorer_server, id="early",
+    rval_lin <- callModule(explorer_server, id="early",
                         sclist = usr,
                         useid = "elist",
                         #source = "early_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "early_dragselect")),
                         cmeta = cmeta,
                         showcols_basic = elin_cols_basic,
                         showcols_advanced = elin_cols_advanced,
-                        onlyEUI = T
+                        tabset = "lin"
     )
 
-    # Update gene search box
-    updateSelectizeInput(session, "dy_ctype_gene", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
-
     observe({
-        req(rval1$mclass)
-        rval1$cells
-        rval1$group_name
+        req(rval_ct$mclass)
+        rval_ct$cells
+        rval_ct$group_name
         isolate({
-            if(!is.null(rval1$cells)) {
-                if(!rval1$mclass %in% colnames(cmeta$df)) {
-                    cmeta$df[, rval1$mclass] <- "unannotated"
+            if(!is.null(rval_ct$cells)) {
+                if(!rval_ct$mclass %in% colnames(cmeta$df)) {
+                    cmeta$df[, rval_ct$mclass] <- "unannotated"
                 }
-                cmeta$df[[rval1$mclass]][match(rval1$cells, rownames(cmeta$df))] <- rep(rval1$group_name, length(rval1$cells))
+                cmeta$df[[rval_ct$mclass]][match(rval_ct$cells, rownames(cmeta$df))] <- rep(rval_ct$group_name, length(rval_ct$cells))
             } else {
-                cmeta$df[[rval1$mclass]] <- NULL
+                cmeta$df[[rval_ct$mclass]] <- NULL
             }
         })
     })
 
     observe({
-        req(rval1$ustats, length(rval1$list))
+        req(rval_ct$ustats, length(rval_ct$list))
         isolate({
-            usr$clist <- rval1$list
+            usr$clist <- rval_ct$list
         })
     })
 
     observe({
-        req(rval2$mclass)
-        rval2$cells
-        rval2$group_name
+        req(rval_lin$mclass)
+        rval_lin$cells
+        rval_lin$group_name
         isolate({
-            if(!is.null(rval2$cells)) {
-                if(!rval2$mclass %in% colnames(cmeta$df)) {
-                    cmeta$df[, rval2$mclass] <- "unannotated"
+            if(!is.null(rval_lin$cells)) {
+                if(!rval_lin$mclass %in% colnames(cmeta$df)) {
+                    cmeta$df[, rval_lin$mclass] <- "unannotated"
                 }
-                cmeta$df[[rval2$mclass]][match(rval2$cells, rownames(cmeta$df))] <- rep(rval2$group_name, length(rval2$cells))
+                cmeta$df[[rval_lin$mclass]][match(rval_lin$cells, rownames(cmeta$df))] <- rep(rval_lin$group_name, length(rval_lin$cells))
             } else {
-                cmeta$df[[rval2$mclass]] <- NULL
+                cmeta$df[[rval_lin$mclass]] <- NULL
             }
         })
     })
 
     observe({
-        req(rval2$ustats, length(rval2$list))
+        req(rval_lin$ustats, length(rval_lin$list))
         isolate({
-            usr$elist <- rval2$list
+            usr$elist <- rval_lin$list
         })
     })
     
@@ -170,45 +167,6 @@ function(input, output, session) {
     )
     
 
-    # Image gene expression graph plot
-
-    output$image_graph_plot_ui <- renderUI({
-        req(input$image_ploth)
-        plotOutput("image_graph_plot", height = paste0(500/5.5 *input$image_ploth,"px")) %>% withSpinner()
-    })
-
-    output$image_graph_plot <- renderPlot({
-        req(input$image_colorBy, input$image_pal)
-        t_cut <- 108
-        plotg <- input$image_colorBy
-        g<-g_all %>% activate("nodes") %>% 
-            mutate(text.size = ifelse(time > t_cut, 0, 10/log10(time+1))) %>%
-            mutate(name = ifelse(time > t_cut, "", name)) %>%
-            filter(!(time > 200 & is.na(!!as.name(plotg))))
-        range(as.data.frame(g)$text.size)
-        plotGraph(g, color.by=plotg, pal=input$image_pal, label="name", type = "numeric",border.size=.3, legend.title = names(image_colorBy_choices)[which(image_colorBy_choices == input$image_colorBy)]) + 
-            theme(
-                  axis.ticks.x=element_blank(),
-                  axis.text.x=element_blank(),
-                  axis.ticks.y=element_blank(),
-                  axis.text.y=element_blank(),
-                  legend.margin=margin(15,0,0,0),
-                  legend.box.margin=margin(-10,-10,-10,-10),
-                  plot.margin = unit(c(.3,.5,.3,.3), "cm"))
-    })
-
-    output$g_meta_table <- DT::renderDataTable({
-        req(input$image_colorBy)
-        curg<- names(image_colorBy_choices)[which(image_colorBy_choices == input$image_colorBy)]
-        req(curg %in% names(g_meta_list))
-        DT::datatable(g_meta_list[[curg]], selection = 'none',
-                      rownames=F, 
-                      options = list(
-                          searching=F, 
-                          scrollX = TRUE,
-                          paging = F
-                      )
-        ) 
-    })
+    
     
 }

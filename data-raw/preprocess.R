@@ -39,11 +39,12 @@ names(clist)[which(names(clist) == "Early Embryo Germline Rectum")] <- "Early Em
 names(clist)[which(names(clist) == "Non Ciliated Neurons")] <- "Non-Ciliated Neurons"
 names(clist) <- tools::toTitleCase(names(clist))
 
-
+max_pc <- 10
 keep_elist <- c(
     "Time 150min Lineage"="time150_disp1_bc_regress", 
     "Time 200min Lineage"="time200_disp1_bc_regress", 
     "Time 250min Lineage"="time250_disp1_bc_regress", 
+    "Time 300min Lineage"="time300_disp1_bc_regress",
     "Time 250min AB Neuron + Glia"="ABneuronglia[time250]", 
     "Time 250min AB Pharynx"="ABpharynx[time250]", 
     "Time 250min AB Hypodermis"="AB_HYP[time250]", 
@@ -173,6 +174,22 @@ if("unannotated" %in% unique_levels) unique_levels <- c(unique_levels[unique_lev
 meta_old$t250.lineages <- factor(meta_old$t250.lineages, levels = unique_levels)
 pData(all_cds) <- meta_old
 
+
+# Graph plot
+
+graph_genes <- graph_genes[order(graph_genes)]
+g_meta_list<- readRDS("data-raw/image_gene_meta_list.rds")
+g_meta_list <- lapply(g_meta_list, function(x) {
+    colnames(x) <- c("Gene", "Series", "Allele", "Strain", "Reporter type", "Data source")
+    x$Gene <- NULL
+    x[["Data source"]][which(x[["Data source"]] == "EPIC")] <- "EPiC"
+    x <- x[,c("Series", "Reporter type", "Strain", "Allele", "Data source")]
+    return(x)
+})
+
+
+
+
 # Load Sup Table S1 and modify
 ct_marker_tbl <- read.csv("data-raw/Table S1_ marker genes for terminal cell types - Sheet1.csv")
 ct_marker_tbl$X <- NULL
@@ -188,17 +205,25 @@ cur_umap_names[which(!cur_umap_names %in% names(clist))]
 cell_type_markers$UMAP <- cur_umap_names[as.character(cell_type_markers$UMAP)]
 
 
-# Graph plot
+# Load Sup Table S5 and modify
+ct_marker_s5 <- read.csv("data-raw/Table S5_ marker genes for pre-terminal lineages - t250.csv")
+lineage_markers <- ct_marker_s5
+replace_names <- names(keep_elist)
+keep_elist2 <- keep_elist
+keep_elist2[which(keep_elist2 == "MSXp[time250]")] <- "MSxp[time250]"
+names(replace_names) <- keep_elist2
 
-graph_genes <- graph_genes[order(graph_genes)]
-g_meta_list<- readRDS("data-raw/image_gene_meta_list.rds")
-g_meta_list <- lapply(g_meta_list, function(x) {
-    colnames(x) <- c("Gene", "Series", "Allele", "Strain", "Reporter type", "Data source")
-    x$Gene <- NULL
-    x[["Data source"]][which(x[["Data source"]] == "EPIC")] <- "EPiC"
-    x <- x[,c("Series", "Reporter type", "Strain", "Allele", "Data source")]
-    return(x)
-})
+lineage_markers$UMAP <- replace_names[as.character(lineage_markers$UMAP)]
+
+x <- as.character(lineage_markers$Markers)
+genes<-trimws(unlist(strsplit(x, ",")), which = "both")
+genes[which(!genes %in% gene_symbol_choices)]
+
+
+
+
+### Final test and load data ###
+
 
 usethis::use_data(clist, overwrite = T)
 usethis::use_data(elist, overwrite = T)
@@ -210,6 +235,7 @@ usethis::use_data(g_meta_list, overwrite = T)
 
 usethis::use_data(tf_tbl, overwrite = T)
 usethis::use_data(cell_type_markers, overwrite = T)
+usethis::use_data(lineage_markers, overwrite = T)
 usethis::use_data(graph_genes, overwrite = T)
 
 devtools::load_all()

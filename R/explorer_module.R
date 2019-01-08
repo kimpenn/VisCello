@@ -7,7 +7,7 @@ explorer_ui <- function(id) {
 }
 
 #' @export
-explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, showcols_basic = NULL, showcols_advanced = NULL, onlyEUI = T){
+explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, showcols_basic = NULL, showcols_advanced = NULL, tabset = "ct"){
     ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less", cells = NULL, cell_source = NULL)
     # Reactive variable storing all basic plot parameters
     pvals <- reactiveValues()
@@ -110,14 +110,59 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         )
         
         cui <- tagList(
-                DT::dataTableOutput(ns("ct_marker_tbl"))
+                DT::dataTableOutput(ns("ct_marker_tbl")),
+                downloadButton(ns("download_ct_marker"), "Download Table", class = "btn_rightAlign")
         )
         
-        if(onlyEUI) {
-            return(eui)
-        } else {
+        # Marker imaging graph ui
+        mui <- fluidRow(
+            column(4,
+                   wellPanel(
+                       selectInput(ns("image_colorBy"), "Color by", choices = image_colorBy_choices),
+                       selectInput(ns("image_pal"), "Palette", choices=image_palettes),
+                       numericInput(ns("image_ploth"), "Plot Height", min=1, value = 7, step=1),
+                       tags$br(),
+                       tagList(tags$strong("EPiC Movies: "), tags$a("http://epic.gs.washington.edu/", href="http://epic.gs.washington.edu/")),
+                       tagList(tags$strong("EPiC2 Movies: "), tags$a("http://epic.gs.washington.edu/Epic2/", href="http://epic.gs.washington.edu/Epic2/"))
+                   ),
+                   fluidRow(
+                       column(12, tags$p("Expression level summarized from following sources:"))
+                   ),
+                   DT::dataTableOutput(ns("g_meta_table"))
+            ), 
+            column(8, 
+                   uiOutput(ns("image_graph_plot_ui"))
+            )
+        )
+        
+        lui <- tagList(
+            DT::dataTableOutput(ns("lin_marker_tbl")),
+            downloadButton(ns("download_lin_marker"), "Download Table", class = "btn_rightAlign")
+        )
+        
+        if(tabset == "lin") {
             tabsetPanel(
-                id = ns("core_tab"),
+                id = ns("lin_tab"),
+                tabPanel(
+                    value = "eui",
+                    tags$b("Explorer"),
+                    eui
+                ),
+                tabPanel(
+                    value = "mui",
+                    tags$b("Marker Imaging"),
+                    mui
+                ),
+                tabPanel(
+                    value = "lui",
+                    tags$b("Lineage Markers"),
+                    tags$br(),
+                    lui
+                )
+            )
+        } else if(tabset == "ct") {
+            tabsetPanel(
+                id = ns("ct_tab"),
                 tabPanel(
                     value = "eui",
                     tags$b("Explorer"),
@@ -135,6 +180,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                     cui
                 )
             )
+        } else {
+            return()
         }
     })
     
@@ -342,17 +389,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         })
     })
 
-    observe({
-        input$gene_list
-        isolate({
-            if(!is.null(input$gene_list)){
-                if(ev$colorBy_state == "less") {
-                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "Less options..."="lessop"), selected = "gene.expr")
-                } else {
-                    updateSelectInput(session, "proj_colorBy", "Color By", choices = c(showcols_advanced, ev$meta_custom, "More options..."="moreop"), selected = "gene.expr")
-                }
-            }
-        })
+    observeEvent(input$gene_list, {
+        updateSelectInput(session, "proj_colorBy", selected = "gene.expr")
     })
 
     observeEvent(input$proj_colorBy, {
@@ -462,10 +500,11 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             req(input$color_pal)
             if(input$proj_colorBy == "gene.expr"){
                 plot_class <- "expression"
-                req(input$g_limit_sample == ev$sample)
                 if(length(input$gene_list) == 1) {
                     req(!is.na(input$g_limit))
+                    req(input$g_limit_sample == ev$sample)
                     req(input$g_limit_ds == input$log_transform_gene)
+                    req(input$g_limit_gene == input$gene_list)
                     #print(paste0(input$gene_list, ": ", input$g_limit))
                     limits <- c(0,input$g_limit)
                 } 
@@ -980,13 +1019,15 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
                             ),
                             conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_ds"), label = NULL, value = input$log_transform_gene)),
                             conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
+                            conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_gene"), label = NULL, value = input$gene_list)),
                             circle = T, label ="Expression histogram and color scale cutoff", tooltip=T, right = T,
                             icon = icon("chart-bar"), size = "xs", status="info", class = "btn_rightAlign")
         } else {
-            tagList(
-                conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
-                conditionalPanel("1==0", ns = ns, numericInput(ns("g_limit"), label = NULL, value = NA))
-            )
+            return()
+            # tagList(
+            #     conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
+            #     conditionalPanel("1==0", ns = ns, numericInput(ns("g_limit"), label = NULL, value = NA))
+            # )
         }
     })
 
@@ -1283,8 +1324,11 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
     
     output$ct_marker_tbl <- DT::renderDataTable({
         ns <- session$ns
-        cell_type_markers$Marker.genes <- lapply(1:nrow(cell_type_markers), function(i) {
-            x <- as.character(cell_type_markers$Marker.genes[i])
+        
+        ct_show <- cell_type_markers
+        
+        ct_show$Marker.genes <- lapply(1:nrow(ct_show), function(i) {
+            x <- as.character(ct_show$Marker.genes[i])
             genes<-trimws(unlist(strsplit(x, ",")), which = "both")
             #assign("ns1", ns, env=.GlobalEnv)
             btns <- paste(
@@ -1295,12 +1339,13 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
             return(btns)
         })
         #assign("ns1", session$ns, env=.GlobalEnv)
-        cell_type_markers$UMAP <- lapply(1:nrow(cell_type_markers), function(i) {
-            x <- as.character(cell_type_markers$UMAP[i])
+        ct_show$UMAP <- lapply(1:nrow(ct_show), function(i) {
+            x <- as.character(ct_show$UMAP[i])
             shinyInput(actionLink, row = i, id = paste0(x,'_', i), label = x, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("ct_umap"),  "\", this.id)"))
         })
+        names(ct_show) <- c("Cell Type", "UMAP", "Markers", "Notes")
         
-        DT::datatable(cell_type_markers, selection = 'none',
+        DT::datatable(ct_show, selection = 'none',
                       rownames=F, 
                       editable = F, 
                       options = list(
@@ -1322,7 +1367,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
          row <- as.numeric(gene_row[2])
          umap_id <- cell_type_markers$UMAP[row]
          
-         updateTabsetPanel(session, "core_tab", selected = "eui")
+         updateTabsetPanel(session, "ct_tab", selected = "eui")
          updateSelectInput(session, "input_sample", selected = umap_id)
          updateSelectizeInput(session, "proj_colorBy", selected = "gene.expr")
          updateSelectInput(session, "gene_list", selected = gene)
@@ -1335,9 +1380,150 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL,
         }
         row <- as.numeric(umap_row[2])
         umap_id <- cell_type_markers$UMAP[row]
-        updateTabsetPanel(session, "core_tab", selected = "eui")
+        updateTabsetPanel(session, "ct_tab", selected = "eui")
         updateSelectInput(session, "input_sample", selected = umap_id)
     })
+    
+    output$download_ct_marker <- downloadHandler(
+        filename = function() {
+            'cell_type_markers.xlsx'
+        },
+        content = function(con) {
+            write.xlsx(cell_type_markers, file=con)
+        }
+    )
+    
+    
+    
+    ###### Lineage marker imaging graph ######
+    
+    
+    # Image gene expression graph plot
+    
+    output$image_graph_plot_ui <- renderUI({
+        req(input$image_ploth)
+        ns <- session$ns
+        plotOutput(ns("image_graph_plot"), height = paste0(500/5.5 *input$image_ploth,"px")) %>% withSpinner()
+    })
+    
+    output$image_graph_plot <- renderPlot({
+        req(input$image_colorBy, input$image_pal)
+        t_cut <- 108
+        plotg <- input$image_colorBy
+        g<-g_all %>% activate("nodes") %>% 
+            mutate(text.size = ifelse(time > t_cut, 0, 10/log10(time+1))) %>%
+            mutate(name = ifelse(time > t_cut, "", name)) %>%
+            filter(!(time > 200 & is.na(!!as.name(plotg))))
+        range(as.data.frame(g)$text.size)
+        plotGraph(g, color.by=plotg, pal=input$image_pal, label="name", type = "numeric",border.size=.3, legend.title = names(image_colorBy_choices)[which(image_colorBy_choices == input$image_colorBy)]) + 
+            theme(
+                axis.ticks.x=element_blank(),
+                axis.text.x=element_blank(),
+                axis.ticks.y=element_blank(),
+                axis.text.y=element_blank(),
+                legend.margin=margin(15,0,0,0),
+                legend.box.margin=margin(-10,-10,-10,-10),
+                plot.margin = unit(c(.3,.5,.3,.3), "cm"))
+    })
+    
+    output$g_meta_table <- DT::renderDataTable({
+        req(input$image_colorBy)
+        curg<- names(image_colorBy_choices)[which(image_colorBy_choices == input$image_colorBy)]
+        req(curg %in% names(g_meta_list))
+        DT::datatable(g_meta_list[[curg]], selection = 'none',
+                      rownames=F, 
+                      options = list(
+                          searching=F, 
+                          scrollX = TRUE,
+                          paging = F
+                      )
+        ) 
+    })
+    
+    
+    ### Lineage marker table ###
+    output$lin_marker_tbl <- DT::renderDataTable({
+        ns <- session$ns
+        
+        lin_show <- lineage_markers
+        
+        lin_show$Markers <- lapply(1:nrow(lin_show), function(i) {
+            x <- as.character(lin_show$Markers[i])
+            genes<-trimws(unlist(strsplit(x, ",")), which = "both")
+            #if(any(!genes%in%gene_symbol_choices)) print(genes)
+            #assign("ns1", ns, env=.GlobalEnv)
+            btns <- paste(
+                sapply(genes, function(g){
+                    if(g == "POE") return(g)
+                    if(grepl("no ", g)) {
+                        g <- gsub("no ", "", g)
+                        return(
+                            paste0("no ", shinyInput(actionLink, row = i, id = paste0(g,'_', i), label = g, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("lin_gene"),  "\", this.id)")))
+                        )
+                    }
+                    shinyInput(actionLink, row = i, id = paste0(g,'_', i), label = g, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("lin_gene"),  "\", this.id)"))
+                }),
+                collapse = ",&nbsp")
+            return(btns)
+        })
+        #assign("ns1", session$ns, env=.GlobalEnv)
+        lin_show$UMAP <- lapply(1:nrow(lin_show), function(i) {
+            if(is.na(lin_show$UMAP[i])) return(NA)
+            x <- as.character(lin_show$UMAP[i])
+            shinyInput(actionLink, row = i, id = paste0(x,'_', i), label = x, icon = NULL, onclick = paste0("Shiny.onInputChange(\"", ns("lin_umap"),  "\", this.id)"))
+        })
+        names(lin_show) <- c("Lineage Name", "UMAP", "Markers", "Cells Produced", "Notes")
+        
+        DT::datatable(lin_show, selection = 'none',
+                      rownames=F, 
+                      editable = F, 
+                      options = list(
+                          searching=T, 
+                          scrollX = TRUE,
+                          columnDefs = list(list(width = '20%', targets = list(0,1,2)))
+                      )
+        ) %>% DT::formatStyle(columns = c(1),fontWeight = 'bold')
+    })
+    
+    
+    observeEvent(input$lin_gene, {
+        gene_row <- unlist(strsplit(as.character(input$lin_gene), "_", fixed = T))
+        if(length(gene_row) != 2) {
+            return()
+        }
+        gene <- gene_row[1]
+        row <- as.numeric(gene_row[2])
+        umap_id <- lineage_markers$UMAP[row]
+        
+        updateTabsetPanel(session, "lin_tab", selected = "eui")
+        updateSelectInput(session, "input_sample", selected = umap_id)
+        updateSelectizeInput(session, "proj_colorBy", selected = "gene.expr")
+        updateSelectInput(session, "gene_list", selected = gene)
+    })
+    
+    observeEvent(input$lin_umap, {
+        print(input$lin_umap)
+        umap_row <- unlist(strsplit(as.character(input$lin_umap), "_", fixed = T))
+        if(length(umap_row) != 2) {
+            return()
+        }
+        row <- as.numeric(umap_row[2])
+        umap_id <- lineage_markers$UMAP[row]
+        print(umap_id)
+        updateTabsetPanel(session, "lin_tab", selected = "eui")
+        updateSelectInput(session, "input_sample", selected = umap_id)
+    })
+    
+    output$download_lin_marker <- downloadHandler(
+        filename = function() {
+            'lineage_markers.xlsx'
+        },
+        content = function(con) {
+            write.xlsx(lineage_markers, file=con)
+        }
+    )
+    
+    
     
     
     rval <- reactiveValues(mclass = NULL, cells=NULL, group_name=NULL, ulist = list())

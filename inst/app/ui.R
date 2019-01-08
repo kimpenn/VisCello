@@ -70,35 +70,7 @@ function() {
     ),
     tabPanel(
         "Early Lineage",
-        tabsetPanel(
-            tabPanel(
-                tags$b("Explorer"),
-                width = 12,
-                explorer_ui("early")
-            ),
-            tabPanel(
-                tags$b("Marker Imaging"),
-                fluidRow(
-                    column(4,
-                           wellPanel(
-                               selectInput("image_colorBy", "Color by", choices = image_colorBy_choices),
-                               selectInput("image_pal", "Palette", choices=image_palettes),
-                               numericInput("image_ploth", "Plot Height", min=1, value = 7, step=1),
-                               tags$br(),
-                               tagList(tags$strong("EPiC Movies: "), tags$a("http://epic.gs.washington.edu/", href="http://epic.gs.washington.edu/")),
-                               tagList(tags$strong("EPiC2 Movies: "), tags$a("http://epic.gs.washington.edu/Epic2/", href="http://epic.gs.washington.edu/Epic2/"))
-                           ),
-                           fluidRow(
-                               column(12, tags$p("Expression level summarized from following sources:"))
-                           ),
-                           DT::dataTableOutput("g_meta_table")
-                    ), 
-                    column(8, 
-                           uiOutput("image_graph_plot_ui")
-                    )
-                )
-            )
-        )
+        explorer_ui("early")
     ),
     tabPanel(
         "Differential Expression",
