@@ -62,7 +62,7 @@ get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
 
 #' @export
 numeric_color_opt <- function() {
-    allowed_pals <- c('rainbow2', 'rainbow', 'gg_color_hue', 'RdOgYl', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno', 'grey&red')
+    allowed_pals <- c('blue_green_gold', 'black_red_gold', "black_red", "red_yellow", 'rainbow2', 'rainbow', 'gg_color_hue', 'RdOgYl', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno', 'grey&red')
     return(allowed_pals)
 }
 
@@ -89,6 +89,14 @@ get_numeric_color <- function(palette = NULL) {
         c("grey85", "red", "orange", "yellow")
     } else if(palette == "gg_color_hue") {
         gg_color_hue2(10)
+    } else if(palette == "blue_green_gold"){
+        c("grey85", "blue", "green", "#FFD200", "gold")
+    } else if(palette == "black_red_gold"){
+        c("grey85", "black", "red", "#FFD200")
+    } else if(palette == "black_red") {
+        c("grey85", "black", "red")
+    } else if(palette == "red_yellow") {
+        c("grey85",  "red", "yellow")
     }
 }
 

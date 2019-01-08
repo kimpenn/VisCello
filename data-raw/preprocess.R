@@ -162,6 +162,16 @@ pData(all_cds) <- pData(all_cds)[,which(colnames(pData(all_cds)) %in% colorby_or
 
 
 
+# Load new t250 lineage annotaion
+meta_new <- read.csv("data-raw/t250_metadata_revised.csv")
+meta_old <- pData(all_cds)
+meta_old$t250.lineages <- as.character(meta_old$t250.lineages)
+meta_old$t250.lineages[match(meta_new$X, rownames(meta_old))] <- as.character(meta_new$t250.lineages.new)
+
+unique_levels<- unique(as.character(meta_old$t250.lineages))
+if("unannotated" %in% unique_levels) unique_levels <- c(unique_levels[unique_levels!="unannotated"], "unannotated")
+meta_old$t250.lineages <- factor(meta_old$t250.lineages, levels = unique_levels)
+pData(all_cds) <- meta_old
 
 # Load Sup Table S1 and modify
 ct_marker_tbl <- read.csv("data-raw/Table S1_ marker genes for terminal cell types - Sheet1.csv")
