@@ -40,7 +40,7 @@ Imports:
     irlba
 License: GPL-3
 Encoding: UTF-8
-LazyData: false
+LazyData: true
 biocViews: Software, Sequencing, RNASeq, GeneExpression, DifferentialExpression, AnnotationData,
         Caenorhabditis_elegans
 RoxygenNote: 6.1.1
