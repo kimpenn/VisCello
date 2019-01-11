@@ -10,12 +10,12 @@ function() {
     fluidPage(
         div(style="padding: 1px 0px; width: '100%'",
             titlePanel(
-                title="", windowTitle="VisCello: C.elegans Embryogenesis Visualizer"
+                title="", windowTitle=mainTitle
             )
         ),
         navbarPage(
     title = div(
-        "C.elegans Embryogenesis",
+        mainTitle,
         div(
          id = "sys_control",
         dropdownButton(
@@ -69,16 +69,8 @@ function() {
         )
     ),
     tabPanel(
-        "Early Lineage",
-        explorer_ui("early")
-    ),
-    tabPanel(
         "Differential Expression",
-        de_ui("cel")
-    ),
-    tabPanel(
-        "Tutorial",
-        tags$p("To be added.")
+        de_ui("eht")
     ),
     header = tagList(
         tags$br(),

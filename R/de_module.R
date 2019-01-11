@@ -77,7 +77,7 @@ de_ui <- function(id) {
 }
 
 #' @export
-de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
+de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu"){
     ################################# DE Module ###################################
     
     des <- reactiveValues()
@@ -261,20 +261,21 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
     
     output$de_sample_ui <- renderUI({
         ns <- session$ns
-        options <- c(names(sclist$clist), names(sclist$elist))
+        options <- names(sclist$clist)
+        print(options)
         selectInput(ns("de_sample"), "Choose Sample:", choices=options)
     })
     
     observe({
         req(input$de_sample)
         sample <- input$de_sample
-        cur_list <- c(sclist$clist,sclist$elist)
+        cur_list <- sclist$clist
         idx <- cur_list[[sample]]@idx
         cur_meta <-  cmeta$df[idx,]
         des$vis <- cur_list[[sample]]
         if(!is.null(des$vis@pmeta) && nrow(des$vis@pmeta) == nrow(cur_meta)) cur_meta <- cbind(cur_meta, des$vis@pmeta)
         des$meta <- cur_meta
-        des$meta_options <- c(de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% ctype_cols_advanced)])
+        des$meta_options <- c(de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% pmeta_attr$meta_id)])
         #assign("des", reactiveValuesToList(des), env=.GlobalEnv)
     })
     
@@ -405,6 +406,10 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
         plotProj(proj, dim_col = c(1,2), group.by=input$de_metaclass, pal=factor_color, size = input$de_plot_marker_size, plot_title=NULL, legend.title = NULL, na.col = "lightgrey", alpha=proj$alpha, alpha_level=input$de_plot_alpha_level, legend=legend, onplotAnnot = onplotAnnot, onplotAnnotSize = 3, legend.text.size = 3, breaks = factor_breaks)
     })
     
+    observe({
+        assign("de_idx", reactiveValuesToList(de_idx), env = .GlobalEnv)
+    })
+    
     observeEvent(input$run_de,{
         gidx <- which(lapply(de_idx$idx_list, length) != 0)
         if(length(gidx) <= 1) {
@@ -430,6 +435,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
         withProgress(message = 'Processing...', {
             incProgress(1/2)
             test_method = "sseq"
+            
             test_group <- de_idx$group_name[gidx]
             test_group[which(test_group == "")] <- "Background"
             test_idx <- de_idx$idx_list[gidx]
@@ -437,11 +443,10 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
                 rep(test_group[i], length(test_idx[[i]]))
             }))
             test_idx <- unlist(test_idx)
-            cur_cds <- all_cds[, test_idx]
+            cur_cds <- cello[, test_idx]
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
-            feature_data <- fData(cur_cds)[,c("id", "gene_short_name")]
-            colnames(feature_data) <- c("id", "symbol")
+            feature_data <- fData(cur_cds)
             prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0)
         })
         de_list <- lapply(prioritized_genes, function(x) {
@@ -513,7 +518,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
     observe({
         req(de_res$deg, input$hmap_dscale)
         if(sum(sapply(de_res$de_list, nrow)) == 0) return()
-        cur_list <- c(sclist$clist,sclist$elist)
+        cur_list <- names(sclist$clist)
         #isolate({
         # Color bar on top of heatmap
         #assign("de_res", reactiveValuesToList(de_res), env =.GlobalEnv)
@@ -552,9 +557,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
         if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx]
+                dat <- cello@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(all_cds)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(cello)[de_res$feature_idx, de_res$test_idx]
             }
             de_res$hmap<-gbm_pheatmap2(dat,
                                        genes_to_plot = de_res$deg,
@@ -574,9 +579,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
         #assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- all_cds@auxOrderingData$normalize_expr_data[de_res$feature_idx, de_res$test_idx]
+                dat <- cello@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(all_cds)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(cello)[de_res$feature_idx, de_res$test_idx]
             }
             return(
                 heatmaply_plot(dat,
@@ -698,7 +703,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL){
         ## GO
         withProgress(message = 'Enrichment test in progress...', {
             incProgress(1/2)
-            enrich_list <- compute_go(de_res$de_list, de_res$feature_data[["symbol"]], type = input$go_type, organism = "cel")
+            enrich_list <- compute_go(de_res$de_list, de_res$feature_data[["symbol"]], type = input$go_type, organism = organism)
             de_res$enrich_list <- enrich_list
             de_res$enrich_type <- input$go_type
         })

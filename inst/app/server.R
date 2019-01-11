@@ -80,8 +80,8 @@ function(input, output, session) {
         usr <- do.call(reactiveValues,r_data$usr)
         rm(r_data, envir = .GlobalEnv)
     } else {
-        cmeta <- reactiveValues(df=pData(all_cds))
-        usr <- reactiveValues(clist = clist, elist = elist)
+        cmeta <- reactiveValues(df=pData(cello))
+        usr <- reactiveValues(clist = clist)
     }
 
     # Load data
@@ -95,21 +95,7 @@ function(input, output, session) {
     rval_ct <- callModule(explorer_server, id="main",
                         sclist = usr,
                         useid = "clist",
-                        #source = "main_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "main_dragselect")),
-                        cmeta = cmeta,
-                        showcols_basic = ctype_cols_basic,
-                        showcols_advanced = ctype_cols_advanced,
-                        tabset = "ct"
-    )
-
-    rval_lin <- callModule(explorer_server, id="early",
-                        sclist = usr,
-                        useid = "elist",
-                        #source = "early_dragselect", event = reactive(plotly::event_data("plotly_selected", source = "early_dragselect")),
-                        cmeta = cmeta,
-                        showcols_basic = elin_cols_basic,
-                        showcols_advanced = elin_cols_advanced,
-                        tabset = "lin"
+                        cmeta = cmeta
     )
 
     observe({
@@ -134,39 +120,14 @@ function(input, output, session) {
             usr$clist <- rval_ct$list
         })
     })
-
-    observe({
-        req(rval_lin$mclass)
-        rval_lin$cells
-        rval_lin$group_name
-        isolate({
-            if(!is.null(rval_lin$cells)) {
-                if(!rval_lin$mclass %in% colnames(cmeta$df)) {
-                    cmeta$df[, rval_lin$mclass] <- "unannotated"
-                }
-                cmeta$df[[rval_lin$mclass]][match(rval_lin$cells, rownames(cmeta$df))] <- rep(rval_lin$group_name, length(rval_lin$cells))
-            } else {
-                cmeta$df[[rval_lin$mclass]] <- NULL
-            }
-        })
-    })
-
-    observe({
-        req(rval_lin$ustats, length(rval_lin$list))
-        isolate({
-            usr$elist <- rval_lin$list
-        })
-    })
     
    
     # DE
     
-    callModule(de_server, id="cel",
+    callModule(de_server, id="eht",
                sclist = usr,
-               cmeta = cmeta
+               cmeta = cmeta,
+               organism = "mmu"
     )
-    
-
-    
     
 }

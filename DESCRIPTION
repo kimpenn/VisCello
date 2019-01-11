@@ -1,10 +1,10 @@
-Package: VisCello
+Package: VisCello.rbk
 Type: Package
-Title: A visualization tool for single cell data of C.elegans embrogenesis
-Version: 0.9.0
-Author: Qin Zhu, Jonathan Packer, Junyhong Kim, John Murray, Bob Waterston
+Title: Viscello for RBK consortium (pre-release)
+Version: 0.1.0
+Author: Qin Zhu, Junhyong Kim
 Maintainer: Qin Zhu <zhuqin@pennmedicine.upenn.edu>
-Description: A visualization tool for C.elegans scRNA-Seq data. Also applicable to other scRNA-Seq/scATAC-Seq data as a hosting, exploration and analysis platfrom (see VisCello.base). 
+Description: Viscello for RBK consortium (pre-release)
 Depends:
     R (>= 3.1.0),
     shiny,
@@ -31,7 +31,7 @@ Depends:
     knitr,
     monocle,
     clusterProfiler,
-    celegans.db,
+    org.Mm.eg.db, 
     ggraph,
     tidygraph
 Imports:
@@ -41,6 +41,5 @@ Imports:
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-biocViews: Software, Sequencing, RNASeq, GeneExpression, DifferentialExpression, AnnotationData,
-        Caenorhabditis_elegans
+biocViews: Software, Sequencing, RNASeq, GeneExpression, DifferentialExpression, AnnotationData
 RoxygenNote: 6.1.1
