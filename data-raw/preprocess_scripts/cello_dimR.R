@@ -32,7 +32,7 @@ compute_tsne_cello <- function(eset, cello, use_dim=30, n_component = 2, perplex
 }
 
 
-compute_umap_cello <- function(cello, use_dim = 30,  n_component=2, umap_path = "src/python_src/umap.py") {
+compute_umap_cello <- function(eset, cello, use_dim = 30, n_component=2, umap_path = "src/python_src/umap.py") {
     if(is.null(cello@proj[["PCA"]])) stop("Compute PCA first.")
     pca_proj <- cello@proj[["PCA"]]
     if(ncol(pca_proj) < use_dim) stop("Compute PCA with dimension greater than that specified in use_dim.")
@@ -55,13 +55,14 @@ compute_umap_cello <- function(cello, use_dim = 30,  n_component=2, umap_path = 
                               "bandwidth", "gamma", "a", "b", "random_state",
                               "metric_kwds", "angular_rp_forest", "verbose")]
     )
-    cur_dim <- use_dim
-    umap_args$X <- pca_proj[,1:cur_dim]
+    umap_args$X <- pca_proj[,1:use_dim]
     tmp <- do.call(monocle_UMAP, umap_args)
     tmp$embedding_ <- (tmp$embedding_ - min(tmp$embedding_))/max(tmp$embedding_)
     umap_proj <- as.data.frame(tmp$embedding_)
-    row.names(umap_proj) <- rownames(pca_proj)
-    return(umap_proj)
+    colnames(umap_proj) <- paste0("UMAP_", 1:n_component)
+    rownames(umap_proj) <- colnames(eset)
+    cello@proj[[paste0("UMAP-",n_component, "D [", use_dim, "PC]" )]] <- umap_proj
+    return(cello)
 }
 
 # Monocle 3 umap code
