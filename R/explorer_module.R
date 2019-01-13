@@ -176,7 +176,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                         ),
                         fluidRow(
                             column(6, selectInput(ns("color_pal"), "Palette", choices=factor_color_opt())),
-                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected = "ol"))
+                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected = "none"))
                         ),
                         fluidRow(
                             column(6, numericInput(ns("show_ploth"), "Height (resize window for width)", min=1, value = 7, step=1)),
@@ -532,9 +532,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         }
         gnames <- gene_id_symbol[input$gene_list]
         if(input$log_transform_gene == "log2") {
-            gvals <- t(as.matrix(cello@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(eset@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
         } else if(input$log_transform_gene == "raw") {
-            gvals <- t(as.matrix(exprs(cello)[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(exprs(eset)[input$gene_list,ev$vis@idx, drop=F]))
         }
         colnames(gvals) <- gnames
         ev$gene_values <- gvals
@@ -715,7 +715,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         content = function(con, format = input$selectCell_goal) {
             req(format, length(ev$cells))
             if(format == "downcell") {
-                cur_cds <- cello[,ev$cells]
+                cur_cds <- eset[,ev$cells]
                 tmp<-ev$meta %>% tibble::rownames_to_column("Cell")
                 rownames(tmp) <- tmp$Cell
                 pData(cur_cds) <- tmp
@@ -1035,7 +1035,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Name already taken.")
             return()
         }
-        newvis <- new("cvis", idx = match(ev$cells, colnames(cello)))
+        newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
         newvis@proj[[input$proj_type]] <- pvals$proj[ev$cells, pvals$plot_col]
         rval$list[[input$zoom_name]] <- newvis
         rval$ustats <- "add"
@@ -1082,12 +1082,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             incProgress(1/2)
             set.seed(2018)
             #assign("ev1cells", ev$cells, env=.GlobalEnv)
-            cds_oidx <- filter_cds(cds=cello[,ev$cells], min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
+            cds_oidx <- filter_cds(cds=eset[,ev$cells], min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
             #assign("cds1", cds_oidx, env=.GlobalEnv)
             irlba_res <- compute_pca_cds(cds_oidx, num_dim =input$compdimr_numpc, scvis=NULL, use_order_gene = T, residualModelFormulaStr = resform, return_type="irlba")
             pca_proj <- as.data.frame(irlba_res$x)
             rownames(pca_proj) <- colnames(cds_oidx)
-            newvis <- new("cvis", idx = match(ev$cells, colnames(cello)))
+            newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
             newvis@proj[["PCA"]] <- pca_proj
             if(grepl("UMAP", input$compdimr_type)) {
                 n_component = ifelse(grepl("2D", input$compdimr_type), 2, 3)
@@ -1239,9 +1239,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         
         colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
         if(input$bp_log_transform_gene == "log2") {
-            df <- as.data.frame(as.matrix(cello@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
         } else {
-            df <- as.data.frame(as.matrix(exprs(cello)[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(exprs(eset)[input$bp_gene, ev$vis@idx[cur_idx]]))
         }
         
         feature_plot(df, input$bp_gene, 

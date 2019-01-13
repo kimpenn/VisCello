@@ -443,7 +443,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 rep(test_group[i], length(test_idx[[i]]))
             }))
             test_idx <- unlist(test_idx)
-            cur_cds <- cello[, test_idx]
+            cur_cds <- eset[, test_idx]
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
@@ -557,9 +557,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- cello@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
+                dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(cello)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
             }
             de_res$hmap<-gbm_pheatmap2(dat,
                                        genes_to_plot = de_res$deg,
@@ -579,9 +579,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         #assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- cello@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
+                dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(cello)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
             }
             return(
                 heatmaply_plot(dat,
