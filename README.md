@@ -2,33 +2,6 @@ Using VisCello for Single Cell Data Visualization
 ================
 Qin Zhu, Kim Lab, University of Pennsylvania
 
-<style type="text/css">
-
-body{ /* Normal  */
-      font-size: 12px;
-  }
-td {  /* Table  */
-  font-size: 8px;
-}
-h1.title {
-  font-size: 38px;
-}
-h1 { /* Header 1 */
-  font-size: 28px;
-}
-h2 { /* Header 2 */
-    font-size: 22px;
-}
-h3 { /* Header 3 */
-  font-size: 18px;
-}
-code.r{ /* Code block */
-    font-size: 12px;
-}
-pre { /* Code block - determines code spacing between lines */
-    font-size: 14px;
-}
-</style>
 General data requirement
 ------------------------
 
