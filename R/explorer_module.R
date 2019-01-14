@@ -713,11 +713,11 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         content = function(con, format = input$selectCell_goal) {
             req(format, length(ev$cells))
             if(format == "downcell") {
-                cur_cds <- eset[,ev$cells]
+                cur_eset <- eset[,ev$cells]
                 tmp<-ev$meta %>% tibble::rownames_to_column("Cell")
                 rownames(tmp) <- tmp$Cell
-                pData(cur_cds) <- tmp
-                saveRDS(cur_cds, con, compress=F) # Not compress so that saving is faster
+                pData(cur_eset) <- tmp
+                saveRDS(cur_eset, con, compress=F) # Not compress so that saving is faster
             } else if(format == "downmeta") {
                 write.csv(ev$meta[ev$cells, ], con)
             }
@@ -750,8 +750,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 column(12, selectInput(ns("selectCell_goal"), paste("Operation on", length(selected_samples), "cells chosen by", ev$cell_source), choices = list(
                     "Zoom in to selected cells" = "zoom", 
                     "Name selected cell subset" = "addmeta",
-                    "Compute new PCA/UMAP with selected cells" = "compdimr",
-                    "Download expression data (Monocle cds format) of selected cells" = "downcell",
+                    #"Compute new PCA/UMAP with selected cells" = "compdimr",
+                    "Download expression data (ExpressionSet format) of selected cells" = "downcell",
                     "Download meta data of selected cells" = "downmeta"
                 )))
             ),
