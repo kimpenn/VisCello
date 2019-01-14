@@ -1,10 +1,7 @@
----
-title: "Using VisCello for Single Cell Data Visualization"
-author: "Qin Zhu, Kim Lab, University of Pennsylvania"
-output:
-    rmarkdown::github_document
-bibliography: bibliography.bib
----
+Using VisCello for Single Cell Data Visualization
+================
+Qin Zhu, Kim Lab, University of Pennsylvania
+
 <style type="text/css">
 
 body{ /* Normal  */
@@ -32,35 +29,29 @@ pre { /* Code block - determines code spacing between lines */
     font-size: 14px;
 }
 </style>
+General data requirement
+------------------------
 
+`VisCello` requires two main data object - an `ExpressionSet` object and a `Cello` object (or list of Cello objects).
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+The `ExpressionSet` object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
 
-
-## General data requirement
-
-`VisCello` requires two main data object - an `ExpressionSet` object and a `Cello` object (or list of Cello objects). 
-
-The `ExpressionSet` object is a general class from Bioconductor. See https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
-
-The `Cello` object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results. 
+The `Cello` object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
 
 This vignette will describe the preprocessing step for inputing data into VisCello.
 
+Prepare ExpressionSet object
+----------------------------
 
-## Prepare ExpressionSet object
+The `data-raw` folder contains an example dataset and associated meta information from Paul et al. (2015). The files in the folder are:
 
-The `data-raw` folder contains an example dataset and associated meta information from @paul2015transcriptional. The files in the folder are:
-
-* `subset_GSE72857.txt`: Raw gene expression matrix, with column as cells and rows as genes.
-* `subset_GSE72857_log2norm.txt`: Log2 normalized expression matrix, same dimension as raw matrix. You can also input any other type of normalized data as long as it matches the dimension of raw data.
-* `subset_GSE72857_pmeta.txt`: Meta data for the cells. 
+-   `subset_GSE72857.txt`: Raw gene expression matrix, with column as cells and rows as genes.
+-   `subset_GSE72857_log2norm.txt`: Log2 normalized expression matrix, same dimension as raw matrix. You can also input any other type of normalized data as long as it matches the dimension of raw data.
+-   `subset_GSE72857_pmeta.txt`: Meta data for the cells.
 
 Load the data into R and convert them into ExpressionSet using the following code:
 
-```{r, eval=F}
+``` r
 library(Matrix)
 library(Biobase)
 raw_df <- read.table("data-raw/GSE72857_raw.txt")
@@ -77,9 +68,9 @@ eset <- new("ExpressionSet",
              featureData = new("AnnotatedDataFrame", data =fmeta))
 ```
 
-A few additional work needs to be done here: some columns in pmeta, such as cell state should be treated as factors rather than numeric values. 
+A few additional work needs to be done here: some columns in pmeta, such as cell state should be treated as factors rather than numeric values.
 
-```{r, eval=F}
+``` r
 factor_cols <- c("Mouse_ID", "cluster", "State")
 for(c in factor_cols) {
     pData(eset)[[c]] <- factor(pData(eset)[[c]])
@@ -90,19 +81,20 @@ saveRDS(eset, "inst/app/data/eset.rds")
 
 Now the expression data and meta information required by VisCello is in place.
 
-## Prepare Cello object
+Prepare Cello object
+--------------------
 
 `Cello` object allows embedding of multiple dimension reduction results for different subsets of cells. This allows "zoom-in" analysis on subset of cells as well as differential expression analysis on locally defined clusters. The basic structure of `Cello` is as follows:
 
-* `name`: Name of the cell subset
-* `idx` : The index of the cell subset in global expression set.
-* `proj` : Named list of projections such as PCA, t-SNE and UMAP. 
-* `pmeta` : (Optional) local meta data containing the meta data that's specific to this local cell subset. For example, in global meta data, only one "Cluster" column is allowed. But what if you have different clustering results for different cell subsets? You can store this subset-dependent result inside the local pmeta slot of cello.
-* `notes` : (Optional) information about the cell subset to display to the user
+-   `name`: Name of the cell subset
+-   `idx` : The index of the cell subset in global expression set.
+-   `proj` : Named list of projections such as PCA, t-SNE and UMAP.
+-   `pmeta` : (Optional) local meta data containing the meta data that's specific to this local cell subset. For example, in global meta data, only one "Cluster" column is allowed. But what if you have different clustering results for different cell subsets? You can store this subset-dependent result inside the local pmeta slot of cello.
+-   `notes` : (Optional) information about the cell subset to display to the user
 
 Create `Cello` for VisCello, note at least one dimension reduction result must be computed and put in `cello@proj`:
 
-```{r eval=F}
+``` r
 library(irlba)
 source("data-raw/preprocess_scripts/cello.R")
 source("data-raw/preprocess_scripts/cello_dimR.R")
@@ -118,7 +110,7 @@ cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 3, umap_pat
 
 Create a list to store `Cello` objects and save to data location.
 
-```{r eval=F}
+``` r
 clist <- list()
 clist[["All Data"]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") # Note if you change the file name from clist.rds to other name, you need to change the readRDS code in global.R
@@ -126,7 +118,7 @@ saveRDS(clist, "inst/app/data/clist.rds") # Note if you change the file name fro
 
 You can create multiple `Cello` hosting visualization information of different subsets of the cells. Say people want to zoom in onto GMP for further analysis:
 
-```{r eval=F}
+``` r
 zoom_type <- "GMP"
 cur_idx <-  which(eset$cell_type == zoom_type)
 cello <- new("Cello", name = zoom_type, idx = cur_idx) 
@@ -140,33 +132,34 @@ clist[[zoom_type]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") 
 ```
 
-
 Now all the data required to run cello has been preprocessed.
 
-## Customize visualization paramaters if necessary
+Customize visualization paramaters if necessary
+-----------------------------------------------
 
 Finnally, you can set which meta data you want to show to the user and what should be their default color palatte and data scale in `global.R`.
 
 For example, change this code to exclude meta columns that you don't want to show the user.
 
-```{r eval=F}
+``` r
 meta_order <- meta_order[!meta_order %in% c("Amp_batch_ID", "well_coordinates", "Number_of_cells", "Plate_ID", "Batch_desc", "Pool_barcode", "Cell_barcode", "RMT_sequence", "no_expression")]
 ```
 
 Set default color palatte and data scale by editting this chunk of code
 
-```{r eval=F}
+``` r
 # Edit if necessary, Which meta to show 
 pmeta_attr$dpal <- ifelse(pmeta_attr$is_numeric, "RdBu", "Set1")
 pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
 pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
 ```
 
-## Compile (install) the VisCello package
+Compile (install) the VisCello package
+--------------------------------------
 
 Open R and do the following:
 
-```{r eval=F}
+``` r
 setwd("/Users/yourname/Download/") # Replace the path with path to PARENT folder of VisCello
 install.packages("devtools")
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -180,14 +173,17 @@ devtools::install_local("VisCello")
 
 Now VisCello is ready to go! To launch Viscello, in R:
 
-```{r eval=F}
+``` r
 library(VisCello)
 cello()
 ```
 
-## Host VisCello on a server
+Host VisCello on a server
+-------------------------
 
-To host VisCello on a server, you need either ShinyServer (https://www.rstudio.com/products/shiny/shiny-server/) or use the shinyapps.io service (https://www.shinyapps.io/). Start Viscello on server by calling above code.
+To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.com/products/shiny/shiny-server/>) or use the shinyapps.io service (<https://www.shinyapps.io/>). Start Viscello on server by calling above code.
 
-## Reference
+Reference
+---------
 
+Paul, Franziska, Ya’ara Arkin, Amir Giladi, Diego Adhemar Jaitin, Ephraim Kenigsberg, Hadas Keren-Shaul, Deborah Winter, et al. 2015. “Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors.” *Cell* 163 (7). Elsevier: 1663–77.
