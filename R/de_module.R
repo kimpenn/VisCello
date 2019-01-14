@@ -76,6 +76,7 @@ de_ui <- function(id) {
     )
 }
 
+
 #' @export
 de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu"){
     ################################# DE Module ###################################
@@ -406,10 +407,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         plotProj(proj, dim_col = c(1,2), group.by=input$de_metaclass, pal=factor_color, size = input$de_plot_marker_size, plot_title=NULL, legend.title = NULL, na.col = "lightgrey", alpha=proj$alpha, alpha_level=input$de_plot_alpha_level, legend=legend, onplotAnnot = onplotAnnot, onplotAnnotSize = 3, legend.text.size = 3, breaks = factor_breaks)
     })
     
-    observe({
-        assign("de_idx", reactiveValuesToList(de_idx), env = .GlobalEnv)
-    })
-    
     observeEvent(input$run_de,{
         gidx <- which(lapply(de_idx$idx_list, length) != 0)
         if(length(gidx) <= 1) {
@@ -518,7 +515,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     observe({
         req(de_res$deg, input$hmap_dscale)
         if(sum(sapply(de_res$de_list, nrow)) == 0) return()
-        cur_list <- names(sclist$clist)
+        cur_list <- sclist$clist
         #isolate({
         # Color bar on top of heatmap
         #assign("de_res", reactiveValuesToList(de_res), env =.GlobalEnv)

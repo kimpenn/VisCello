@@ -113,12 +113,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             id = ns("ct_tab"),
             tabPanel(
                 value = "eui",
-                tags$b("Explorer"),
+                tags$b("Data Visualization"),
                 eui
             ),
             tabPanel(
                 value = "fui",
-                tags$b("Expression by Cell Type"),
+                tags$b("Expression by Group"),
                 fui
             )
         )
@@ -281,7 +281,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             names(factors) <- factors
             ui1 <- selectInput(ns("factor_compo"), "Choose Cells:", choices = factors, multiple = T)
         } else if(input$proj_colorBy != "gene.expr") {
-            num_range <- range(ev$value)
+            num_range <- range(ev$value, na.rm = T)
             num_range[1] <- floor_dec(num_range[1],2)
             num_range[2] <- ceiling_dec(num_range[2],2)
             ui1 <- sliderInput(ns("numeric_range"), label = "Select Range", min = num_range[1], max = num_range[2], value = num_range)
@@ -538,7 +538,6 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         }
         colnames(gvals) <- gnames
         ev$gene_values <- gvals
-        assign("ev", reactiveValuesToList(ev), env =.GlobalEnv)
     })
 
     
@@ -573,7 +572,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
 
     pp1 <- reactive({
         req(length(pvals$plot_col) == 2, pvals$plot_class)
-        assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
+        #assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
         if(pvals$plot_class == "factor") {
             pp_factor()
         } else if(pvals$plot_class == "numeric") {
@@ -593,7 +592,6 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         proj <- pvals$proj
         ds <- pvals$plot_col
         marker_size <- pvals$marker_size * 2
-        assign("pvals", reactiveValuesToList(pvals), env = .GlobalEnv)
         #alpha_manual <- c("f"=1,"t"=pvals$alpha_level)
         if(pvals$plot_class == "factor") {
             plotly::plot_ly(proj, x = as.formula(paste0("~", ds[1])), y = as.formula(paste0("~", ds[2])), z = as.formula(paste0("~", ds[3])),
@@ -988,7 +986,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         ns <- session$ns
         input$plot_config_reset
         req(!input$proj_colorBy %in% c(ev$factor_cols, 'gene.expr'))
-        v_limit <- round(quantile(ev$value, .975), 1)
+        v_limit <- round(quantile(ev$value, .975, na.rm=T), 1)
         dropdownButton2(inputId=ns("v_cutoff"),
                         width = "500px",
                         plotOutput(ns("value_histogram_plot")),

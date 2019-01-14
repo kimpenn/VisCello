@@ -1,5 +1,5 @@
 ---
-title: "VisCello data preprocessing"
+title: "Using VisCello for Single Cell Data Visualization"
 author: "Qin Zhu, Kim Lab, University of Pennsylvania"
 output:
   prettydoc::html_pretty:
@@ -77,6 +77,15 @@ eset <- new("ExpressionSet",
              assayData = assayDataNew("environment", exprs=Matrix(as.matrix(raw_df), sparse = T), norm_exprs = Matrix(as.matrix(norm_df), sparse = T)),
              phenoData =  new("AnnotatedDataFrame", data = pmeta),
              featureData = new("AnnotatedDataFrame", data =fmeta))
+```
+
+A few additional work needs to be done here: some columns in pmeta, such as cell state should be treated as factors rather than numeric values. 
+
+```{r, eval=F}
+factor_cols <- c("Mouse_ID", "cluster", "State")
+for(c in factor_cols) {
+    pData(eset)[[c]] <- factor(pData(eset)[[c]])
+}
 
 saveRDS(eset, "inst/app/data/eset.rds")
 ```
@@ -103,6 +112,7 @@ source("data-raw/preprocess_scripts/cello_dimR.R")
 cello <- new("Cello", name = "All Data", idx = 1:ncol(eset)) # Index is basically the column index, here all cells are included 
 
 # Code for computing dimension reduction, not all of them is necessary, and you can input your own dimension reduction result into the cello@proj list.
+# It is also recommended that you first filter your matrix to remove low expression genes and cells, and input a matrix with variably expressed genes
 cello <- compute_pca_cello(eset, cello, num_dim = 50) # Compute PCA 
 cello <- compute_tsne_cello(eset, cello, use_dim = 30, n_component = 2, perplexity = 30) # Compute t-SNE
 cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 2, umap_path = "data-raw/preprocess_scripts/python/umap.py") # Compute UMAP, need reticulate and UMAP (python package) to be installed
@@ -117,7 +127,56 @@ clist[["All Data"]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") # Note if you change the file name from clist.rds to other name, you need to change the readRDS code in global.R
 ```
 
+
+
+
 Now all the data required to run cello has been preprocessed.
+
+## Customize visualization paramaters if necessary
+
+Finnally, you can set which meta data you want to show to the user and what should be their default color palatte and data scale in `global.R`.
+
+For example, change this code to exclude meta columns that you don't want to show the user.
+
+```{r eval=F}
+meta_order <- meta_order[!meta_order %in% c("Amp_batch_ID", "well_coordinates", "Number_of_cells", "Plate_ID", "Batch_desc", "Pool_barcode", "Cell_barcode", "RMT_sequence", "no_expression")]
+```
+
+Set default color palatte and data scale by editting this chunk of code
+
+```{r eval=F}
+# Edit if necessary, Which meta to show 
+pmeta_attr$dpal <- ifelse(pmeta_attr$is_numeric, "RdBu", "Set1")
+pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
+pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
+```
+
+## Compile (install) the VisCello package
+
+Open R and do the following:
+
+```{r eval=F}
+setwd("/Users/yourname/Download/") # Replace the path with path to PARENT folder of VisCello
+install.packages("devtools")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("monocle", update = F, ask=F)
+BiocManager::install("clusterProfiler", update = F, ask=F)
+BiocManager::install("org.Mm.eg.db", update = F, ask=F)
+BiocManager::install("org.Hs.eg.db", update = F, ask=F)
+devtools::install_local("VisCello")
+```
+
+Now VisCello is ready to go! To launch Viscello, in R:
+
+```{r eval=F}
+library(VisCello)
+cello()
+```
+
+## Host VisCello on a server
+
+To host VisCello on a server, you need either ShinyServer (https://www.rstudio.com/products/shiny/shiny-server/) or use the shinyapps.io service (https://www.shinyapps.io/). Start Viscello on server by calling above code.
 
 ## Reference
 

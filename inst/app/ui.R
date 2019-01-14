@@ -36,7 +36,7 @@ function() {
     theme = shinytheme("flatly"),
     # Application title
     tabPanel(
-        "Cell Type",
+        "Explorer",
         mainPanel(
             NULL,
             width = 12,
