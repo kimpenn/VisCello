@@ -1,10 +1,10 @@
-Package: VisCello.rbk
+Package: VisCello.base
 Type: Package
-Title: Viscello for RBK consortium (pre-release)
+Title: Viscello for Visualization of Single Cell Data
 Version: 0.1.0
-Author: Qin Zhu, Junhyong Kim
+Author: Qin Zhu, Kai Tan, Junhyong Kim
 Maintainer: Qin Zhu <zhuqin@pennmedicine.upenn.edu>
-Description: Viscello for RBK consortium (pre-release)
+Description: Viscello for Visualization of Single Cell Data.
 Depends:
     R (>= 3.1.0),
     shiny,
