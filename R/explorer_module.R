@@ -412,10 +412,6 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 req(input$color_pal %in% numeric_bin_color_opt())
                 factor_color <- get_numeric_bin_color(levels(proj[[input$proj_colorBy]]), palette = input$color_pal)
                 names(factor_color) <- levels(proj[[input$proj_colorBy]])
-            } else if(input$proj_colorBy == "Dataset") {
-                factor_color <- dataset_color
-            } else if(input$proj_colorBy == "Combine_Dataset") {
-                factor_color <- cdataset_color
             }  else {
                 req(input$color_pal %in% factor_color_opt())
                 factor_color <- get_factor_color(unique(proj[[input$proj_colorBy]]), pal=input$color_pal, maxCol = 9)
@@ -1224,10 +1220,6 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             req(input$bp_numericbin_pal)
             factor_color <- get_numeric_bin_color(levels(ev$meta[[input$bp_colorBy]]), palette = input$bp_numericbin_pal)
             names(factor_color) <- levels(ev$meta[[input$bp_colorBy]])
-        } else if(input$proj_colorBy == "Dataset") {
-            factor_color <- dataset_color
-        } else if(input$proj_colorBy == "Combine_Dataset") {
-            factor_color <- cdataset_color
         } else {
             req(input$bp_factor_pal)
             factor_color <- get_factor_color(unique(ev$meta[[input$bp_colorBy]]), pal=input$bp_factor_pal, maxCol = 9)
