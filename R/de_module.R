@@ -529,7 +529,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         } else {
             sample <- de_res$sample
             idx <- cur_list[[sample]]@idx
-            cur_factor <- cmeta$df[idx,][[input$de_hmap_colorBy]]
+            cur_factor <- des$meta[[input$de_hmap_colorBy]]
             unique_factors <- unique(cur_factor)
             de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
             factor_color <- get_factor_color(unique_factors, pal=input$de_plot_color_pal, maxCol = 9)
