@@ -148,7 +148,7 @@ Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
 library(VisCello)
-cello()
+viscello()
 ```
 
 Host VisCello on a server
