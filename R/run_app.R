@@ -11,5 +11,5 @@ viscello <- function(RStudio = F) {
     if(RStudio) {
         options(shiny.launch.browser = .rs.invokeShinyWindowViewer)
     }
-    shiny::runApp(system.file("app", package='VisCello.eht'))
+    shiny::runApp(system.file("app", package='VisCello.base'))
 }
