@@ -147,7 +147,7 @@ devtools::install_local("VisCello.base")
 Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
-library(VisCello)
+library(VisCello.base)
 viscello()
 ```
 
