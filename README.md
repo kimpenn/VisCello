@@ -141,7 +141,7 @@ BiocManager::install("monocle", update = F, ask=F)
 BiocManager::install("clusterProfiler", update = F, ask=F)
 BiocManager::install("org.Mm.eg.db", update = F, ask=F)
 BiocManager::install("org.Hs.eg.db", update = F, ask=F)
-devtools::install_local("VisCello")
+devtools::install_local("VisCello.base")
 ```
 
 Now VisCello is ready to go! To launch Viscello, in R:
