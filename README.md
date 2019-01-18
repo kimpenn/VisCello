@@ -84,10 +84,10 @@ cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 3, umap_pat
 If you already computed your dimension reduction result and wants to make a cello for it, use following R code:
 
 ``` r
-cello <- new("Cello", name = "All Data", idx = cell_index)  # cell_index is which cells from ExpressionSet are used for the dimension reduction
+cello <- new("Cello", name = "My cell subset", idx = cell_index)  # cell_index is which cells from ExpressionSet are used for the dimension reduction
 my_tsne_proj <- read.table("path_to_tsne_projection")
 my_umap_proj <- read.table("path_to_umap_projection") # You can put in as many dimension reduction result as you want
-cello@proj <- list("My t-SNE [2D]" = my_dimr_proj, "My UMAP [3D]" = my_umap_proj) # Put a 2D or 3D in the name to tell VisCello if you want to visualize this as a 2D plot or as a 3D rotatable plot, if 2D there must be 2 columns for each dimension, if 3D there must be 3 columns.
+cello@proj <- list("My t-SNE [2D]" = my_tsne_proj, "My UMAP [3D]" = my_umap_proj) # Put a 2D or 3D in the name to tell VisCello if you want to visualize this as a 2D plot or as a 3D rotatable plot, if 2D there must be 2 columns for each dimension, if 3D there must be 3 columns.
 ```
 
 
