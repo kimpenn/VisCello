@@ -263,7 +263,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     output$de_sample_ui <- renderUI({
         ns <- session$ns
         options <- names(sclist$clist)
-        print(options)
         selectInput(ns("de_sample"), "Choose Sample:", choices=options)
     })
     
@@ -549,11 +548,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             de_res$scale = F
         }
     })
-    
-    observe({
-        assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
-    })
-    
+
     output$de_hmap <- renderPlot({
         req(de_res$de_list)
         shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
