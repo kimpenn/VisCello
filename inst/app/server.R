@@ -127,7 +127,7 @@ function(input, output, session) {
     callModule(de_server, id="eht",
                sclist = usr,
                cmeta = cmeta,
-               organism = "mmu"
+               organism = organism
     )
     
 }

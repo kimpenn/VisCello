@@ -14,6 +14,8 @@ Cello <- setClass("Cello",
                   )
 )
 
+organism = "mmu" # Set species
+
 
 eset <- readRDS("data/eset.rds")
 clist <- readRDS("data/clist.rds")
