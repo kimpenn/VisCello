@@ -4,6 +4,16 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 mainTitle = "VisCello"
 
+Cello <- setClass("Cello",
+                  slots = c(
+                      name = "character", # The name of cvis
+                      idx = "numeric", # The index of global cds object
+                      proj = "list", # The projections as a list of data frame
+                      pmeta = "data.frame", # The local meta data
+                      notes = "character" # Other information to display to the user
+                  )
+)
+
 
 eset <- readRDS("data/eset.rds")
 clist <- readRDS("data/clist.rds")

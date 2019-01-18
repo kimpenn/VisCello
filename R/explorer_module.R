@@ -1029,7 +1029,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Name already taken.")
             return()
         }
-        newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
+        newvis <- new("Cello", idx = match(ev$cells, colnames(eset)))
         newvis@proj[[input$proj_type]] <- pvals$proj[ev$cells, pvals$plot_col]
         rval$list[[input$zoom_name]] <- newvis
         rval$ustats <- "add"
