@@ -4,6 +4,7 @@
 #
 # http://shiny.rstudio.com
 #
+library(shinyWidgets)
 
 
 function() {

@@ -78,7 +78,7 @@ de_ui <- function(id) {
 
 
 #' @export
-de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu"){
+de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu", session_vals = NULL){
     ################################# DE Module ###################################
     
     des <- reactiveValues()
@@ -276,7 +276,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         des$vis <- cur_list[[sample]]
         if(!is.null(des$vis@pmeta) && nrow(des$vis@pmeta) == nrow(cur_meta)) cur_meta <- cbind(cur_meta, des$vis@pmeta)
         des$meta <- cur_meta
-        des$meta_options <- c(de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% pmeta_attr$meta_id)])
+        des$meta_options <- c(session_vals$de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% session_vals$pmeta_attr$meta_id)])
         #assign("des", reactiveValuesToList(des), env=.GlobalEnv)
     })
     
@@ -440,7 +440,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 rep(test_group[i], length(test_idx[[i]]))
             }))
             test_idx <- unlist(test_idx)
-            cur_cds <- eset[, test_idx]
+            cur_cds <- session_vals$eset[, test_idx]
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
@@ -561,11 +561,11 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
+                dat <- session_vals$eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(session_vals$eset)[de_res$feature_idx, de_res$test_idx]
             }
-            rownames(dat) <- make.unique(as.character(fData(eset)$symbol[match(rownames(dat), fData(eset)$id)]))
+            rownames(dat) <- make.unique(as.character(fData(session_vals$eset)$symbol[match(rownames(dat), fData(session_vals$eset)$id)]))
             de_res$hmap<-gbm_pheatmap2(dat,
                                        genes_to_plot = de_res$deg,
                                        cells_to_plot=de_res$cells_to_plot,
@@ -584,11 +584,11 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         #assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
-                dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
+                dat <- session_vals$eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
-                dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
+                dat <- exprs(session_vals$eset)[de_res$feature_idx, de_res$test_idx]
             }
-            rownames(dat) <- make.unique(as.character(fData(eset)$symbol[match(rownames(dat), fData(eset)$id)]))
+            rownames(dat) <- make.unique(as.character(fData(session_vals$eset)$symbol[match(rownames(dat), fData(session_vals$eset)$id)]))
             return(
                 heatmaply_plot(dat,
                                genes_to_plot = de_res$deg,

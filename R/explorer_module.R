@@ -7,7 +7,7 @@ explorer_ui <- function(id) {
 }
 
 #' @export
-explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL){
+explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, session_vals = NULL){
     ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less", cells = NULL, cell_source = NULL)
     # Reactive variable storing all basic plot parameters
     pvals <- reactiveValues()
@@ -36,7 +36,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                         )
                        ),
                        uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = gene_symbol_choices, multiple = T),
+                       selectizeInput(ns("gene_list"), "Search Gene:", choices = session_vals$gene_symbol_choices, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
                        uiOutput(ns("data_highlight"))
                    ),
@@ -77,7 +77,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             wellPanel(
                 fluidRow(
                     column(3, uiOutput(ns("bp_sample_ui"))),
-                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected")),
+                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", session_vals$gene_symbol_choices), selected = "No gene selected")),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
                     column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
                 ),
@@ -144,7 +144,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
 
     output$proj_colorBy_ui <- renderUI({
         ns = session$ns
-        selectInput(ns("proj_colorBy"), "Color By", choices = c(showcols_meta, ev$meta_custom))
+        selectInput(ns("proj_colorBy"), "Color By", choices = c(session_vals$showcols_meta, ev$meta_custom))
     })
 
     output$plot_scalecolor_ui <- renderUI({
@@ -215,7 +215,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         })
     })
     
-    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
+    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = session_vals$gene_symbol_choices, selected = NULL, server=T)
 
     output$plot_ui <- renderUI({
         ns <- session$ns
@@ -326,7 +326,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             ev$factor_cols <- sapply(colnames(ev$meta), function(x) {
                 ifelse(!is.numeric(ev$meta[[x]]), x, NA)
             })
-            ev$meta_custom <- colnames(ev$meta)[!colnames(ev$meta) %in% showcols_meta]
+            ev$meta_custom <- colnames(ev$meta)[!colnames(ev$meta) %in% session_vals$showcols_meta]
         })
     })
 
@@ -522,15 +522,15 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
             return()
         }
-        if(any(duplicated(gene_id_symbol[input$gene_list]))) {
+        if(any(duplicated(session_vals$gene_id_symbol[input$gene_list]))) {
             session$sendCustomMessage(type = "showalert", "Duplicated gene name not allowed.")
             return()
         }
-        gnames <- gene_id_symbol[input$gene_list]
+        gnames <- session_vals$gene_id_symbol[input$gene_list]
         if(input$log_transform_gene == "log2") {
-            gvals <- t(as.matrix(eset@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(session_vals$eset@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
         } else if(input$log_transform_gene == "raw") {
-            gvals <- t(as.matrix(exprs(eset)[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(exprs(session_vals$eset)[input$gene_list,ev$vis@idx, drop=F]))
         }
         colnames(gvals) <- gnames
         ev$gene_values <- gvals
@@ -709,7 +709,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         content = function(con, format = input$selectCell_goal) {
             req(format, length(ev$cells))
             if(format == "downcell") {
-                cur_eset <- eset[,ev$cells]
+                cur_eset <- session_vals$eset[,ev$cells]
                 tmp<-ev$meta %>% tibble::rownames_to_column("Cell")
                 rownames(tmp) <- tmp$Cell
                 pData(cur_eset) <- tmp
@@ -1029,7 +1029,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Name already taken.")
             return()
         }
-        newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
+        newvis <- new("cvis", idx = match(ev$cells, colnames(session_vals$eset)))
         newvis@proj[[input$proj_type]] <- pvals$proj[ev$cells, pvals$plot_col]
         rval$list[[input$zoom_name]] <- newvis
         rval$ustats <- "add"
@@ -1076,12 +1076,12 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             incProgress(1/2)
             set.seed(2018)
             #assign("ev1cells", ev$cells, env=.GlobalEnv)
-            cds_oidx <- filter_cds(cds=eset[,ev$cells], min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
+            cds_oidx <- filter_cds(cds=session_vals$eset[,ev$cells], min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
             #assign("cds1", cds_oidx, env=.GlobalEnv)
             irlba_res <- compute_pca_cds(cds_oidx, num_dim =input$compdimr_numpc, scvis=NULL, use_order_gene = T, residualModelFormulaStr = resform, return_type="irlba")
             pca_proj <- as.data.frame(irlba_res$x)
             rownames(pca_proj) <- colnames(cds_oidx)
-            newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
+            newvis <- new("cvis", idx = match(ev$cells, colnames(session_vals$eset)))
             newvis@proj[["PCA"]] <- pca_proj
             if(grepl("UMAP", input$compdimr_type)) {
                 n_component = ifelse(grepl("2D", input$compdimr_type), 2, 3)
@@ -1103,7 +1103,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
     })
     
-    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
+    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", session_vals$gene_symbol_choices), selected = "No gene selected", server=T)
     
     output$bp_sample_ui <- renderUI({
         ns <- session$ns
@@ -1148,7 +1148,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     
     output$bp_colorBy_ui <- renderUI({
         ns <- session$ns
-        selectInput(ns("bp_colorBy"), "Color By:", choices = bp_colorBy_choices)
+        selectInput(ns("bp_colorBy"), "Color By:", choices = session_vals$bp_colorBy_choices)
     })
     
     output$bp_include_ui <- renderUI({
@@ -1206,7 +1206,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     })
     
     bp1 <- reactive({
-        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% gene_symbol_choices)
+        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% session_vals$gene_symbol_choices)
         req(ev$sample == input$bp_sample, ev$sample == input$bp_include_I) # IMPORTANT, this controls the sync between sample choices in the explorer and the featurePlot, and prevent double rendering
         cur_group <- ev$meta[[input$bp_colorBy]]
         # Downsample cells from each cell type
@@ -1229,9 +1229,9 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         
         colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
         if(input$bp_log_transform_gene == "log2") {
-            df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(session_vals$eset@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
         } else {
-            df <- as.data.frame(as.matrix(exprs(eset)[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(exprs(session_vals$eset)[input$bp_gene, ev$vis@idx[cur_idx]]))
         }
         
         feature_plot(df, input$bp_gene, 
