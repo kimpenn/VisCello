@@ -435,7 +435,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             test_group <- de_idx$group_name[gidx]
             test_group[which(test_group == "")] <- "Background"
             test_idx <- de_idx$idx_list[gidx]
-            test_clus <- unlist(sapply(1:length(gidx), function(i){
+            test_clus <- unlist(lapply(1:length(gidx), function(i){
                 rep(test_group[i], length(test_idx[[i]]))
             }))
             test_idx <- unlist(test_idx)
