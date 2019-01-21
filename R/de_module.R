@@ -190,7 +190,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 cur_group <- de_idx$group[[gid]]
                 groups <- des$meta[[input$de_metaclass]]
                 de_idx$idx_list[[which(de_idx$group_name == "")[1]]] <- des$vis@idx[which(!groups %in% cur_group)]
-                sapply(de_idx$idx_list, function(x){print(length(x))})
             } else {
                 for(j in which(de_idx$group_name == "")) de_idx$idx_list[[j]] <- list()
             }
