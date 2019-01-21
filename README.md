@@ -1,6 +1,6 @@
 Using VisCello for Single Cell Data Visualization
 ================
-Qin Zhu, Kim Lab, University of Pennsylvania
+Qin Zhu, University of Pennsylvania
 
 General data requirement
 ------------------------
