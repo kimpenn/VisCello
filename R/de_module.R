@@ -550,8 +550,8 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
 
     output$de_hmap <- renderPlot({
         req(de_res$de_list)
-        shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
-        if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
+        #shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
+        #if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
         if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
