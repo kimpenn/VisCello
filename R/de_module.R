@@ -170,9 +170,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         input$de_g1_group
         input$de_g2_group
         isolate({
-            groups <- des$meta[[input$de_metaclass]]
-            de_idx$idx_list[[1]] <- des$vis@idx[which(groups %in% input$de_g1_group)]
-            de_idx$idx_list[[2]] <- des$vis@idx[which(groups %in% input$de_g2_group)]
             de_idx$group[[1]] <- if(!is.null(input$de_g1_group)) input$de_g1_group else NA
             de_idx$group[[2]] <- if(!is.null(input$de_g2_group)) input$de_g2_group else NA
             de_idx$group_name[1] <-c(paste0(input$de_g1_group, collapse="_"))
@@ -185,17 +182,19 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         group_name <- de_idx$group_name
         gid <- which(group_name != "")
         group_name <- group_name[gid]
-        if(length(group_name) == 1) {
-            isolate({
+        isolate({
+            groups <- des$meta[[input$de_metaclass]]
+            de_idx$idx_list[[1]] <- des$vis@idx[which(groups %in% de_idx$group[[1]])]
+            de_idx$idx_list[[2]] <- des$vis@idx[which(groups %in% de_idx$group[[2]])]
+            if(length(group_name) == 1) {
                 cur_group <- de_idx$group[[gid]]
                 groups <- des$meta[[input$de_metaclass]]
                 de_idx$idx_list[[which(de_idx$group_name == "")[1]]] <- des$vis@idx[which(!groups %in% cur_group)]
-            })
-        } else {
-            isolate({
+                sapply(de_idx$idx_list, function(x){print(length(x))})
+            } else {
                 for(j in which(de_idx$group_name == "")) de_idx$idx_list[[j]] <- list()
-            })
-        }
+            }
+        })
     })
     
     output$downsample_de_ui <- renderUI({
