@@ -9,14 +9,15 @@ factor_color_opt <- function() {
 get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
 {
     unq <- unique(labels)
+    maxCol <- min(length(unq), maxCol)
     hmcol <- RColorBrewer::brewer.pal(maxCol, pal)
     if(nogrey) {
         hmcol <- hmcol[!hmcol %in% c("#999999","#B3B3B3")]
     }
     colv <- rep(NA, length(labels))
     #if (length(unq) > maxCol) {
-        cp <- colorRampPalette(hmcol)
-        hmcol <- cp(length(unq))
+    cp <- colorRampPalette(hmcol)
+    hmcol <- cp(length(unq))
     #}
     for (i in 1:length(unq)) {
         colv[labels == unq[i]] <- hmcol[i]
