@@ -1,5 +1,5 @@
-
-
+library(Biobase)
+library(VisCello.base)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 mainTitle = "VisCello"

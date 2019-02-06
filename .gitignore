@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+rsconnect
+.DS_Store
+*~
+#*#
+*.pyc
