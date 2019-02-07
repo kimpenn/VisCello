@@ -17,9 +17,6 @@ Cello <- setClass("Cello",
 organism = "mmu" # Set species
 
 
-eset <- readRDS("data/eset.rds")
-clist <- readRDS("data/clist.rds")
-
 # This part can be customized if necessary, basically which meta columns you want to show + Gene Expression (gene.expr)
 
 # meta_order <- c(

@@ -13,6 +13,9 @@ function(input, output, session) {
     # Things that were previously in global.R but depend on the values of eset/clist
     #######################################
     session_vals = c()
+    session_vals$eset <- readRDS("data/eset.rds")
+    session_vals$clist <- readRDS("data/clist.rds")
+      
     meta_order <- colnames(pData(session_vals$eset))
     names(meta_order) <- colnames(pData(session_vals$eset))
     # Don't show factors that's not useful to the user
