@@ -8,6 +8,48 @@ library(Biobase)
 
 function(input, output, session) {
     #lapply(list.files("src/instR/", pattern = "\\.(r|R)$", recursive = TRUE, full.names = TRUE), function(x){source(file = x, local = TRUE)})
+
+    #######################################    
+    # Things that were previously in global.R but depend on the values of eset/clist
+    #######################################
+    session_vals = c()
+    meta_order <- colnames(pData(session_vals$eset))
+    names(meta_order) <- colnames(pData(session_vals$eset))
+    # Don't show factors that's not useful to the user
+    meta_order <- meta_order[!meta_order %in% c("Amp_batch_ID", "well_coordinates", "Number_of_cells", "Plate_ID", "Batch_desc", "Pool_barcode", "Cell_barcode", "RMT_sequence", "no_expression")]
+    meta_order["Gene Expression"] = "gene.expr"
+    session_vals$pmeta_attr <- data.frame(meta_id = meta_order, meta_name = names(meta_order), stringsAsFactors=FALSE)
+    pData(session_vals$eset) <- pData(session_vals$eset)[,which(colnames(pData(session_vals$eset)) %in% session_vals$pmeta_attr$meta_id)]
+    session_vals$pmeta_attr$is_numeric <- sapply(as.character(session_vals$pmeta_attr$meta_id), function(x) {
+	if(x %in% colnames(pData(session_vals$eset))) {
+	  is.numeric(pData(session_vals$eset)[[x]])
+	    } else if(x %in% colnames(session_vals$clist[[1]]@pmeta)) {
+	  is.numeric(session_vals$clist[[1]]@pmeta[[x]])
+	    } else if(x == "gene.expr") {
+	  T
+	    } else {
+	  NA
+	    }
+      })
+      # Edit if necessary, Which meta to show 
+      session_vals$pmeta_attr$dpal <- ifelse(session_vals$pmeta_attr$is_numeric, "RdBu", "Set1")
+      session_vals$pmeta_attr$dscale <- ifelse(session_vals$pmeta_attr$is_numeric, "log10", NA)
+      session_vals$pmeta_attr$dscale[which(session_vals$pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
+
+      ### Which meta data to show, and in what order ###	
+      session_vals$showcols_meta <- session_vals$pmeta_attr$meta_id
+      names(session_vals$showcols_meta) <- session_vals$pmeta_attr$meta_name
+      session_vals$bp_colorBy_choices <- session_vals$showcols_meta[!session_vals$pmeta_attr$is_numeric]
+      session_vals$de_meta_options <- session_vals$showcols_meta[!session_vals$pmeta_attr$is_numeric]
+      session_vals$numeric_palettes <- numeric_color_opt()
+      names(session_vals$numeric_palettes) <- session_vals$numeric_palettes
+      session_vals$heatmap_palettes <- session_vals$numeric_palettes[session_vals$numeric_palettes %in% c("RdYlBu", "RdBu", "viridis", "magma", "plasma", "inferno")]
+      session_vals$gene_symbol_choices <- rownames(fData(session_vals$eset))
+      names(session_vals$gene_symbol_choices) <- fData(session_vals$eset)$symbol
+
+      session_vals$gene_id_symbol <- names(session_vals$gene_symbol_choices)
+      names(session_vals$gene_id_symbol) <- session_vals$gene_symbol_choices
+      
     
     #######################################
     # Save state
@@ -80,8 +122,8 @@ function(input, output, session) {
         usr <- do.call(reactiveValues,r_data$usr)
         rm(r_data, envir = .GlobalEnv)
     } else {
-        cmeta <- reactiveValues(df=pData(eset))
-        usr <- reactiveValues(clist = clist)
+        cmeta <- reactiveValues(df=pData(session_vals$eset))
+        usr <- reactiveValues(clist = session_vals$clist)
     }
 
     # Load data
@@ -95,7 +137,9 @@ function(input, output, session) {
     rval_ct <- callModule(explorer_server, id="main",
                         sclist = usr,
                         useid = "clist",
-                        cmeta = cmeta
+                        cmeta = cmeta,
+                        session_vals = session_vals
+    
     )
 
     observe({
@@ -127,7 +171,8 @@ function(input, output, session) {
     callModule(de_server, id="eht",
                sclist = usr,
                cmeta = cmeta,
-               organism = organism
+               organism = organism,
+               session_vals = session_vals
     )
     
 }

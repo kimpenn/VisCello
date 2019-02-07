@@ -7,7 +7,7 @@ explorer_ui <- function(id) {
 }
 
 #' @export
-explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL){
+explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL, session_vals = NULL){
     ev <- reactiveValues(list = NULL, sample=NULL, vis=NULL, colorBy_state = "less", cells = NULL, cell_source = NULL)
     # Reactive variable storing all basic plot parameters
     pvals <- reactiveValues()
@@ -36,7 +36,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                         )
                        ),
                        uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = gene_symbol_choices, multiple = T),
+                       selectizeInput(ns("gene_list"), "Search Gene:", choices = session_vals$gene_symbol_choices, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
                        uiOutput(ns("data_highlight"))
                    ),
@@ -77,7 +77,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             wellPanel(
                 fluidRow(
                     column(3, uiOutput(ns("bp_sample_ui"))),
-                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected")),
+                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", session_vals$gene_symbol_choices), selected = "No gene selected")),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
                     column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
                 ),
@@ -144,7 +144,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
 
     output$proj_colorBy_ui <- renderUI({
         ns = session$ns
-        selectInput(ns("proj_colorBy"), "Color By", choices = c(showcols_meta, ev$meta_custom))
+        selectInput(ns("proj_colorBy"), "Color By", choices = c(session_vals$showcols_meta, ev$meta_custom))
     })
 
     output$plot_scalecolor_ui <- renderUI({
@@ -155,8 +155,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             selectInput(ns("log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw"))
         } else if(!input$proj_colorBy %in% ev$factor_cols){
             default_scale <- NULL
-            if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dscale)) {
-                default_scale <- pmeta_attr$dscale[which(pmeta_attr$meta_id==input$proj_colorBy)]
+            if(input$proj_colorBy %in% session_vals$pmeta_attr$meta_id && !is.null(session_vals$pmeta_attr$dscale)) {
+                default_scale <- session_vals$pmeta_attr$dscale[which(session_vals$pmeta_attr$meta_id==input$proj_colorBy)]
                 if(is.na(default_scale)) default_scale <- NULL
             } 
             selectInput(ns("log_transform_val"), "Data scale", choices=list("Log10"="log10", "Identity" = "identity"), selected = default_scale)
@@ -188,14 +188,14 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     
     observeEvent(input$proj_colorBy, {
         req(!input$proj_colorBy %in% c("moreop", "lessop"))
-        if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
-            default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$proj_colorBy)]
+        if(input$proj_colorBy %in% session_vals$pmeta_attr$meta_id && !is.null(session_vals$pmeta_attr$dpal)) {
+            default_pal <- session_vals$pmeta_attr$dpal[which(session_vals$pmeta_attr$meta_id==input$proj_colorBy)]
         } else {
             default_pal <- NULL
         }
         
         if(input$proj_colorBy == 'gene.expr') {
-            updateSelectInput(session, "color_pal", "Palette", choices=numeric_palettes, selected=default_pal)
+            updateSelectInput(session, "color_pal", "Palette", choices=session_vals$numeric_palettes, selected=default_pal)
         } else if(input$proj_colorBy %in% ev$factor_cols){
             if(grepl("time.bin", input$proj_colorBy)) {
                 updateSelectInput(session, "color_pal", "Palette", choices=numeric_bin_color_opt(), selected=default_pal)
@@ -203,7 +203,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 updateSelectInput(session, "color_pal",  "Palette", choices=factor_color_opt(), selected=default_pal)
             }
         } else {
-            updateSelectInput(session, "color_pal",  choices=numeric_palettes, selected=default_pal)
+            updateSelectInput(session, "color_pal",  choices=session_vals$numeric_palettes, selected=default_pal)
         }
         
     })
@@ -215,7 +215,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         })
     })
     
-    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
+    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = session_vals$gene_symbol_choices, selected = NULL, server=T)
 
     output$plot_ui <- renderUI({
         ns <- session$ns
@@ -326,7 +326,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             ev$factor_cols <- sapply(colnames(ev$meta), function(x) {
                 ifelse(!is.numeric(ev$meta[[x]]), x, NA)
             })
-            ev$meta_custom <- colnames(ev$meta)[!colnames(ev$meta) %in% showcols_meta]
+            ev$meta_custom <- colnames(ev$meta)[!colnames(ev$meta) %in% session_vals$showcols_meta]
         })
     })
 
@@ -483,7 +483,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         ev$proj <- proj # Save an original copy for zoom in
         pvals$proj <- proj
         pvals$proj_colorBy <- input$proj_colorBy
-        pvals$legend_title <- pmeta_attr$meta_name[which(pmeta_attr$meta_id == pvals$proj_colorBy)]
+        pvals$legend_title <- session_vals$pmeta_attr$meta_name[which(session_vals$pmeta_attr$meta_id == pvals$proj_colorBy)]
         pvals$plot_class <- plot_class
         pvals$plot_col <- plot_col
         pvals$factor_color <- factor_color
@@ -522,11 +522,11 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
             return()
         }
-        if(any(duplicated(gene_id_symbol[input$gene_list]))) {
+        if(any(duplicated(session_vals$gene_id_symbol[input$gene_list]))) {
             session$sendCustomMessage(type = "showalert", "Duplicated gene name not allowed.")
             return()
         }
-        gnames <- gene_id_symbol[input$gene_list]
+        gnames <- session_vals$gene_id_symbol[input$gene_list]
         if(input$log_transform_gene == "log2") {
             gvals <- t(as.matrix(eset@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
         } else if(input$log_transform_gene == "raw") {
@@ -1103,7 +1103,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
     })
     
-    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
+    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", session_vals$gene_symbol_choices), selected = "No gene selected", server=T)
     
     output$bp_sample_ui <- renderUI({
         ns <- session$ns
@@ -1148,7 +1148,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     
     output$bp_colorBy_ui <- renderUI({
         ns <- session$ns
-        selectInput(ns("bp_colorBy"), "Color By:", choices = bp_colorBy_choices)
+        selectInput(ns("bp_colorBy"), "Color By:", choices = session_vals$bp_colorBy_choices)
     })
     
     output$bp_include_ui <- renderUI({
@@ -1168,8 +1168,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         ns <- session$ns
         
         req(input$bp_colorBy)
-        if(input$bp_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dpal)) {
-            default_pal <- pmeta_attr$dpal[which(pmeta_attr$meta_id==input$bp_colorBy)]
+        if(input$bp_colorBy %in% session_vals$pmeta_attr$meta_id && !is.null(session_vals$pmeta_attr$dpal)) {
+            default_pal <- session_vals$pmeta_attr$dpal[which(session_vals$pmeta_attr$meta_id==input$bp_colorBy)]
         } else {
             default_pal <- NULL
         }
@@ -1206,7 +1206,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     })
     
     bp1 <- reactive({
-        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% gene_symbol_choices)
+        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% session_vals$gene_symbol_choices)
         req(ev$sample == input$bp_sample, ev$sample == input$bp_include_I) # IMPORTANT, this controls the sync between sample choices in the explorer and the featurePlot, and prevent double rendering
         cur_group <- ev$meta[[input$bp_colorBy]]
         # Downsample cells from each cell type
@@ -1227,7 +1227,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         }
         factor_color[["unannotated"]] <- "lightgrey"
         
-        colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
+        colorBy_name <-  session_vals$pmeta_attr$meta_name[which(session_vals$pmeta_attr$meta_id == input$bp_colorBy)]
         if(input$bp_log_transform_gene == "log2") {
             df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
         } else {

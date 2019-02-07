@@ -78,7 +78,7 @@ de_ui <- function(id) {
 
 
 #' @export
-de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu"){
+de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organism = "mmu", session_vals = NULL){
     ################################# DE Module ###################################
     
     des <- reactiveValues()
@@ -273,7 +273,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         des$vis <- cur_list[[sample]]
         if(!is.null(des$vis@pmeta) && nrow(des$vis@pmeta) == nrow(cur_meta)) cur_meta <- cbind(cur_meta, des$vis@pmeta)
         des$meta <- cur_meta
-        des$meta_options <- c(de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% pmeta_attr$meta_id)])
+        des$meta_options <- c(session_vals$de_meta_options, colnames(des$meta)[which(!colnames(des$meta) %in% session_vals$pmeta_attr$meta_id)])
         #assign("des", reactiveValuesToList(des), env=.GlobalEnv)
     })
     
@@ -497,7 +497,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                             column(6, selectInput(ns("de_hmap_scale"), "Data scale", choices = c("Log2 normalized count"="log2", "Raw count" = "raw")))
                         ),
                         fluidRow(
-                            column(6, selectInput(ns("hmap_color_pal"), "Heatmap Color", choices=heatmap_palettes)),
+                            column(6, selectInput(ns("hmap_color_pal"), "Heatmap Color", choices=session_vals$heatmap_palettes)),
                             column(6, numericInput(ns("hmap_numg"), "Max #DEG/Group", min=2, max = 500, value = 30, step=1))
                         ),
                         fluidRow(
