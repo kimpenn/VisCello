@@ -1,20 +1,33 @@
 library(Biobase)
+library(reticulate)
+source_python("./src/python_src/rbk_study.py")
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
 # http://shiny.rstudio.com
 #
 
+#clist <- readRDS(url(foo$clist))
 
 function(input, output, session) {
     #lapply(list.files("src/instR/", pattern = "\\.(r|R)$", recursive = TRUE, full.names = TRUE), function(x){source(file = x, local = TRUE)})
+  
+    query <- reactive({
+      parseQueryString(session$clientData$url_search)
+    })
+
+    deriva.core <- import("deriva.core")
+    host <- isolate(query()[["host"]])
+    instance_rid <- isolate(query()[["RID"]])
+    pb <- get_pathbuilder(host)
+    study_urls <- get_relevant_study_urls(pb, host, instance_rid)
 
     #######################################    
     # Things that were previously in global.R but depend on the values of eset/clist
     #######################################
     session_vals = c()
-    session_vals$eset <- readRDS("data/eset.rds")
-    session_vals$clist <- readRDS("data/clist.rds")
+    session_vals$eset <- readRDS(url(study_urls$eset))
+    session_vals$clist <- readRDS(url(study_urls$clist))
       
     meta_order <- colnames(pData(session_vals$eset))
     names(meta_order) <- colnames(pData(session_vals$eset))

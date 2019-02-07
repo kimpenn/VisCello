@@ -1,5 +1,10 @@
 library(Biobase)
 library(VisCello.base)
+library(shiny)
+library(reticulate)
+py_install("pandas")
+py_install("git+https://github.com/informatics-isi-edu/deriva-py.git")
+
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 mainTitle = "VisCello"
