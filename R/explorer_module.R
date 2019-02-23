@@ -243,7 +243,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         #assign("hover", hover, env=.GlobalEnv)
         x <- nearPoints(pvals$proj, hover, maxpoints = 1)
         req(nrow(x) > 0)
-        if(pvals$plot_class != "expression") {
+        if(pvals$plot_class != "expression" || is.null(ev$gene_values)) {
             y <- as.character(x[[pvals$proj_colorBy]])
             tip <- paste0("<b>", pvals$legend_title, ": </b>", y, "<br/>")
         } else {
