@@ -39,7 +39,7 @@ Imports:
     reticulate,
     limma,
     irlba
-License: GPL-3
+License: GPL-2
 Encoding: UTF-8
 LazyData: true
 biocViews: Software, Sequencing, RNASeq, GeneExpression, DifferentialExpression, AnnotationData
