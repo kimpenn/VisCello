@@ -8,7 +8,6 @@ Description: Viscello for Visualization of Single Cell Data.
 Depends:
     R (>= 3.1.0),
     shiny,
-    shinydashboard,
     shinyBS,
     shinycssloaders,
     devtools,

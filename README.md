@@ -2,8 +2,7 @@ Using VisCello for Single Cell Data Visualization
 ================
 Qin Zhu, Kim Lab, University of Pennsylvania
 
-General data requirement
-------------------------
+## General data requirement
 
 `VisCello` requires two main data object - an `ExpressionSet` object and a `Cello` object (or list of Cello objects).
 
@@ -13,12 +12,11 @@ The `Cello` object is an S4 class specifically designed for visualizing subsets 
 
 This vignette will describe the preprocessing step for inputing data into VisCello.
 
-Prepare ExpressionSet object
-----------------------------
+## Prepare ExpressionSet object
 
 The `data-raw` folder contains an example dataset and associated meta information from Paul et al. (2015). The files in the folder are:
 
--   `subset_GSE72857.txt`: Raw gene expression matrix, with column as cells and rows as genes.
+-   `subset_GSE72857.txt`: Raw gene expression matrix, with column as cells and rows as genes, rownames must be unique.
 -   `subset_GSE72857_log2norm.txt`: Log2 normalized expression matrix, same dimension as raw matrix. You can also input any other type of normalized data as long as it matches the dimension of raw data.
 -   `subset_GSE72857_pmeta.txt`: Meta data for the cells.
 
@@ -31,9 +29,12 @@ raw_df <- read.table("data-raw/GSE72857_raw.txt")
 norm_df <- read.table("data-raw/GSE72857_log2norm.txt")
 pmeta <- read.table("data-raw/GSE72857_pmeta.txt")
 fmeta <- read.table("data-raw/GSE72857_fmeta.txt")
-# feature meta Must contain a column id - ensemble id, and correspoinding symbol, the matrix rownames should be ensemble id.
-colnames(fmeta) <- c("id", "symbol") 
+
+# Feature meta MUST have rownames the same as the rownames of expression matrix - this can be gene name or gene id. 
+# The first column of feature meta must be the gene name (symbol). Note you can have duplicated gene name in the first column but not duplicated rownames.
 rownames(fmeta) <- fmeta$id
+fmeta$id <- NULL   # Make gene symbol the first column
+sum(duplicated(fmeta$symbol))
 
 eset <- new("ExpressionSet",
              assayData = assayDataNew("environment", exprs=Matrix(as.matrix(raw_df), sparse = T), norm_exprs = Matrix(as.matrix(norm_df), sparse = T)),
@@ -54,8 +55,49 @@ saveRDS(eset, "inst/app/data/eset.rds")
 
 Now the expression data and meta information required by VisCello is in place.
 
-Prepare Cello object
---------------------
+
+### [Alternative] Convert common objects to ExpressionSet
+
+* Seurat object
+
+``` r
+fmeta <- data.frame(symbol = rownames(seurat@data)) # Seurat does not seem to store feature meta data as of version 3.0
+rownames(fmeta) <- fmeta$symbol
+eset <- new("ExpressionSet",
+             assayData = assayDataNew("environment", exprs=Matrix(as.matrix(seurat@raw.data), sparse = T), 
+             norm_exprs = Matrix(as.matrix(seurat@data), sparse = T)),
+             phenoData =  new("AnnotatedDataFrame", data = seurat@meta.data),
+             featureData = new("AnnotatedDataFrame", data = fmeta))
+```
+
+* Monocle object
+
+``` r
+fmeta <- fData(cds)
+fmeta[[1]] <- fmeta$gene_short_name # Make first column gene name
+eset <- new("ExpressionSet",
+             assayData = assayDataNew("environment", exprs=Matrix(as.matrix(exprs(cds)), sparse = T),  
+             norm_exprs = Matrix(log2(Matrix::t(Matrix::t(FM)/sizeFactors(cds))+1), sparse = T)), # Note this is equivalent to 'log' normalization method in monocle, you can use other normalization function
+             phenoData =  new("AnnotatedDataFrame", data = pData(cds)),
+             featureData = new("AnnotatedDataFrame", data = fmeta))
+```
+
+* SingleCellExperiment/SummarizedExperiment object
+
+``` r
+fmeta <- rowData(sce)
+# if rowData empty, you need to make a new fmeta with rownames of matrix: fmeta <- data.frame(symbol = rownames(sce)); rownames(fmeta) <- fmeta[[1]]
+fmeta[[1]] <- fmeta$symbol # Make sure first column is gene name
+eset <- new("ExpressionSet",
+             assayData = assayDataNew("environment", exprs=Matrix(sce@assays$data$counts, sparse = T), # Change 'counts' to raw count matrix
+             norm_exprs = Matrix(sce@assays$data$norm_counts, sparse = T)), # Change 'norm_counts' to raw count matrix
+             phenoData =  new("AnnotatedDataFrame", data = colData(sce)),
+             featureData = new("AnnotatedDataFrame", data = fmeta))
+```
+
+**Note future versions of VisCello will likely switch to using SingleCellExperiment object instead of ExpressionSet, but will be backward compatible.**
+
+## Prepare Cello object
 
 `Cello` object allows embedding of multiple dimension reduction results for different subsets of cells. This allows "zoom-in" analysis on subset of cells as well as differential expression analysis on locally defined clusters. The basic structure of `Cello` is as follows:
 
@@ -117,8 +159,7 @@ saveRDS(clist, "inst/app/data/clist.rds")
 
 Now all the data required to run cello has been preprocessed.
 
-Customize visualization paramaters if necessary
------------------------------------------------
+## Customize visualization paramaters if necessary
 
 Finnally, you can set which meta data you want to show to the user and what should be their default color palatte and data scale in `global.R`.
 
@@ -137,8 +178,7 @@ pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
 pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
 ```
 
-Compile (install) the VisCello package
---------------------------------------
+## Compile (install) the VisCello package
 
 Open R and do the following:
 
@@ -161,10 +201,13 @@ library(VisCello.base)
 viscello()
 ```
 
-Host VisCello on a server
--------------------------
+## Host VisCello on a server
 
 To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.com/products/shiny/shiny-server/>) or use the shinyapps.io service (<https://www.shinyapps.io/>). Start Viscello on server by calling above code.
+
+## Cite VisCello
+
+Packer, J.S., Zhu, Q., Huynh, C., Sivaramakrishnan, P., Preston, E., Dueck, H., Stefanik, D., Tan, K., Trapnell, C., Kim, J. and Waterston, R.H., 2019. A lineage-resolved molecular atlas of C. elegans embryogenesis at single cell resolution. BioRxiv, p.565549.
 
 Reference
 ---------

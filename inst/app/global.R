@@ -78,7 +78,7 @@ names(numeric_palettes) <- numeric_palettes
 heatmap_palettes <- numeric_palettes[numeric_palettes %in% c("RdYlBu", "RdBu", "viridis", "magma", "plasma", "inferno")]
 
 gene_symbol_choices <- rownames(fData(eset))
-names(gene_symbol_choices) <- fData(eset)$symbol
+names(gene_symbol_choices) <- make.unique(as.character(fData(eset)[[1]]))
 
 gene_id_symbol <- names(gene_symbol_choices)
 names(gene_id_symbol) <- gene_symbol_choices

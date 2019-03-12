@@ -67,7 +67,7 @@ get_ordered_gene_list_sseq2 <- function (fdata, cluster_labels, test_ID, sseq_pa
     group0 <- cluster_labels == test_ID
     group1 <- cluster_labels != test_ID
     de_result <- sseq_differential_expression2(t_mat, group0,
-                                              group1, sseq_params, gene_ids = fdata$id, gene_symbols = fdata$symbol)
+                                              group1, sseq_params, gene_ids = rownames(fdata), gene_symbols = fdata[[1]])
     return(de_result)
 }
 

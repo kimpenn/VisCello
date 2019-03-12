@@ -421,7 +421,7 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     }
     colnames(df) <- "expression_level"
     df <- cbind(df, meta)
-
+    
     if(order.by == "mean") {
         group_mean <- df %>% dplyr::group_by_at(group.by) %>% dplyr::summarize(mean = mean(expression_level))
         group_order <- group_mean[[group.by]][order(group_mean$mean, decreasing = T)]
@@ -429,12 +429,12 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     }
     
     g1 <- ggplot(df, aes_string(x=group.by, y="expression_level"))
-    
-    g1 <- g1 + geom_point(position=position_jitter(w=0.1,h=0), size = pointSize, aes_string(colour = group.by, group = group.by))
     if(style == "box") {
-        g1 <- g1 + geom_boxplot(aes_string(fill = group.by, alpha = 0.2))
+        g1 <- g1 + geom_boxplot(aes_string(fill = group.by, alpha = 0.2), outlier.size = 1, outlier.stroke = 0, outlier.alpha = .2)
     } else if(style == "violin") {
-        g1 <- g1 + geom_violin(aes_string(fill = group.by, alpha = 0.2), trim = F)
+        g1 <- g1 + geom_violin(aes_string(fill = group.by, alpha = 0.2), trim = T, scale = "width")
+    } else if(style == "points") {
+        g1 <- g1 + geom_jitter(size = pointSize, aes_string(colour = group.by))
     }
     
     if(!is.null(names(pal))) {
@@ -465,9 +465,11 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     if(log_scale) {
         g1 <- g1 + scale_y_log10(breaks=c(25,100,400))
     }
-
+    
     return(g1 + monocle:::monocle_theme_opts())
 }
+
+
 
 #' @export
 plotGraph <- function(g, color.by=NULL, pal=NULL, label=NULL, alpha = NULL, type = NULL, background="grey20", border.size = 0.1, node.text.size = 1, legend.title = waiver()) {

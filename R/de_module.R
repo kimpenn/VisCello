@@ -55,7 +55,7 @@ de_ui <- function(id) {
                    ),
                    uiOutput(ns("de_hmap_ui"))%>% withSpinner(),
                    fluidRow(
-                       column(6, materialSwitch(inputId = ns("interactive_hmap"), tags$b("interactive"), value = F, status = "success")),
+                       column(6),
                        column(6, uiOutput(ns("download_hmap_ui")))
                    )
             )
@@ -441,6 +441,8 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
+            #assign("cur_cds", cur_cds, env =.GlobalEnv)
+            #assign("test_clus", test_clus, env=.GlobalEnv)
             prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0)
         })
         de_list <- lapply(prioritized_genes, function(x) {
@@ -468,7 +470,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                     if(organism == "mmu") {
                         tbl <- tbl %>% dplyr::filter(gene_name %in% tf_mouse$name)
                     } else if(organism == "hsa"){
-                        tbl <- tbl %>% dplyr::filter(gene_id %in% tf_human$id)
+                        tbl <- tbl %>% dplyr::filter(gene_name %in% tf_human$name)
                     }
                 }
                 return(tbl)
@@ -480,11 +482,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     output$de_hmap_ui <- renderUI({
         ns <- session$ns
         req(de_res$deg)
-        if(input$interactive_hmap) {
-            plotlyOutput(ns("de_hmaply"), height="600px") 
-        } else {
-            plotOutput(ns("de_hmap"), height="600px") 
-        }
+        plotOutput(ns("de_hmap"), height="600px") 
     })
     
     
@@ -558,7 +556,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             } else {
                 dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
             }
-            rownames(dat) <- make.unique(as.character(fData(eset)$symbol[match(rownames(dat), fData(eset)$id)]))
+            rownames(dat) <- make.unique(as.character(fData(eset)[[1]][match(rownames(dat), rownames(fData(eset)))]))
             de_res$hmap<-gbm_pheatmap2(dat,
                                        genes_to_plot = de_res$deg,
                                        cells_to_plot=de_res$cells_to_plot,
@@ -702,7 +700,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         ## GO
         withProgress(message = 'Enrichment test in progress...', {
             incProgress(1/2)
-            enrich_list <- compute_go(de_res$de_list, bg_list = de_res$feature_data[["id"]], type = input$go_type, organism = organism)
+            enrich_list <- compute_go(de_res$de_list, bg_list = de_res$feature_data[[1]], type = input$go_type, organism = organism)
             de_res$enrich_list <- enrich_list
             de_res$enrich_type <- input$go_type
         })

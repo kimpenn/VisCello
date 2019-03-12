@@ -9,12 +9,12 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
         idcol <- "gene_name"
     } else if(organism =="mmu") {
         orgdb <- "org.Mm.eg.db"
-        fromType = "ENSEMBL"
-        idcol <- "gene_id"
+        fromType = "SYMBOL"
+        idcol <- "gene_name"
     } else if(organism == "hsa") {
         orgdb <- "org.Hs.eg.db"
-        fromType = "ENSEMBL"
-        idcol <- "gene_id"
+        fromType = "SYMBOL"
+        idcol <- "gene_name"
     }
 
     bg.df <- bitr(bg_list, fromType = fromType,

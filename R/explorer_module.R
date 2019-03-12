@@ -286,7 +286,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             num_range[2] <- ceiling_dec(num_range[2],2)
             ui1 <- sliderInput(ns("numeric_range"), label = "Select Range", min = num_range[1], max = num_range[2], value = num_range)
         } else if(input$proj_colorBy == "gene.expr"){
-            curg <- input$gene_list
+            curg <- gene_id_symbol[input$gene_list]
             if(length(curg)){
                 options <- list(
                     "All cells" = "nulv"
@@ -444,7 +444,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                     #print(paste0(input$gene_list, ": ", input$g_limit))
                     limits <- c(0,input$g_limit)
                 } 
-                if(!is.null(input$cell_expr_gene)) {
+                if(!is.null(input$cell_expr_gene) && !is.null(ev$gene_values)) {
                     if(input$cell_expr_gene!="nulv") {
                         proj$alpha <- ifelse(rowSums(ev$gene_values > 0) == ncol(ev$gene_values), "f", "t")
                     }
@@ -1187,7 +1187,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         dropdownButton2(inputId=ns("bp_plot_configure"),
                         fluidRow(
                             column(6, numericInput(ns("bp_downsample"), "Downsample #", min=2, max = 10000, value=500)),
-                            column(6, selectInput(ns("bp_plot_type"), "Plot Type", choices = list("Box plot" = "box", "Violin plot" = "violin", "Plot points" = "points")))
+                            column(6, selectInput(ns("bp_plot_type"), "Plot Type", choices = list("Violin plot" = "violin", "Box plot" = "box", "Plot points" = "points")))
                         ),
                         fluidRow(
                             column(6, numericInput(ns("bp_marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
@@ -1228,13 +1228,14 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         factor_color[["unannotated"]] <- "lightgrey"
         
         colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
+        curg <- input$bp_gene
+
         if(input$bp_log_transform_gene == "log2") {
-            df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[curg, ev$vis@idx[cur_idx]]))
         } else {
-            df <- as.data.frame(as.matrix(exprs(eset)[input$bp_gene, ev$vis@idx[cur_idx]]))
+            df <- as.data.frame(as.matrix(exprs(eset)[curg, ev$vis@idx[cur_idx]]))
         }
-        
-        feature_plot(df, input$bp_gene, 
+        feature_plot(df, gene_id_symbol[input$bp_gene], 
                      group.by = input$bp_colorBy, 
                      meta = cur_meta, 
                      pal = factor_color, 
