@@ -2,6 +2,20 @@ Using VisCello for Single Cell Data Visualization
 ================
 Qin Zhu, Kim Lab, University of Pennsylvania
 
+
+## Playground
+
+Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
+You can also install this app locally with code below:
+
+``` r
+devtools::install_github("qinzhu/VisCello.base") # install
+library(VisCello.base) # load
+viscello() # launch
+```
+
+To put in your own dataset into VisCello for visualization, follow guidance below.
+
 ## General data requirement
 
 `VisCello` requires two main data object - an `ExpressionSet` object and a `Cello` object (or list of Cello objects).
