@@ -53,7 +53,7 @@ de_ui <- function(id) {
                               uiOutput(ns("hmap_configure_ui"))
                        )
                    ),
-                   uiOutput(ns("de_hmap_ui"))%>% withSpinner(),
+                   plotOutput(ns("de_hmap"), height="600px") %>% withSpinner(),
                    fluidRow(
                        column(6),
                        column(6, uiOutput(ns("download_hmap_ui")))
@@ -170,6 +170,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         input$de_g1_group
         input$de_g2_group
         isolate({
+            groups <- des$meta[[input$de_metaclass]]
+            de_idx$idx_list[[1]] <- des$vis@idx[which(groups %in% input$de_g1_group)]
+            de_idx$idx_list[[2]] <- des$vis@idx[which(groups %in% input$de_g2_group)]
             de_idx$group[[1]] <- if(!is.null(input$de_g1_group)) input$de_g1_group else NA
             de_idx$group[[2]] <- if(!is.null(input$de_g2_group)) input$de_g2_group else NA
             de_idx$group_name[1] <-c(paste0(input$de_g1_group, collapse="_"))
@@ -182,18 +185,17 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         group_name <- de_idx$group_name
         gid <- which(group_name != "")
         group_name <- group_name[gid]
-        isolate({
-            groups <- des$meta[[input$de_metaclass]]
-            de_idx$idx_list[[1]] <- des$vis@idx[which(groups %in% de_idx$group[[1]])]
-            de_idx$idx_list[[2]] <- des$vis@idx[which(groups %in% de_idx$group[[2]])]
-            if(length(group_name) == 1) {
+        if(length(group_name) == 1) {
+            isolate({
                 cur_group <- de_idx$group[[gid]]
                 groups <- des$meta[[input$de_metaclass]]
                 de_idx$idx_list[[which(de_idx$group_name == "")[1]]] <- des$vis@idx[which(!groups %in% cur_group)]
-            } else {
+            })
+        } else {
+            isolate({
                 for(j in which(de_idx$group_name == "")) de_idx$idx_list[[j]] <- list()
-            }
-        })
+            })
+        }
     })
     
     output$downsample_de_ui <- renderUI({
@@ -202,7 +204,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         group <- group[!group == ""]
         if(length(group) == 1) {
             dropdownButton2(inputId=ns("downsample_background"),
+                            selectInput(ns("de_method"), "DE Method", choices=c("Chi-square (binary)" = "chi", "sSeq" = "sseq"), selected = "sseq"),
                             numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
+                            numericInput(ns("de_lfc_cutoff"), "LFC cutoff", value = 1),
                             numericInput(ns("downsample_gp_num"), "Max Cell # in subset", value = 200),
                             numericInput(ns("downsample_bg_num"), "Max Cell # in background", value = 1000),
                             actionButton(ns("downsample_de_bg"), "Downsample Cells", class = "btn_rightAlign"),
@@ -210,7 +214,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                             icon = icon("angle-double-down"), size = "sm", status="success", class = "btn_rightAlign")
         } else {
             dropdownButton2(inputId=ns("downsample_group"),
+                            selectInput(ns("de_method"), "DE Method", choices=c("Chi-square (binary)" = "chi", "sSeq" = "sseq"), selected = "sseq"),
                             numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
+                            numericInput(ns("de_lfc_cutoff"), "LFC cutoff", value = 1),
                             numericInput(ns("downsample_num"), "Max Cell # per Group", value = 200),
                             actionButton(ns("downsample_de"), "Downsample Cells", class = "btn_rightAlign"),
                             circle = T, label ="DE configuration", tooltip=T, right = T,
@@ -390,9 +396,10 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             }
         } 
         
-        factor_color <- get_factor_color(unique(proj[[input$de_metaclass]]), pal=input$de_plot_color_pal, maxCol = 9)
-        names(factor_color) <- unique(proj[[input$de_metaclass]])
-        factor_color[["unannotated"]] <- "lightgrey"
+            factor_color <- get_factor_color(unique(proj[[input$de_metaclass]]), pal=input$de_plot_color_pal, maxCol = 9)
+            names(factor_color) <- unique(proj[[input$de_metaclass]])
+            factor_color[["unannotated"]] <- "lightgrey"
+
         
         if(input$de_metaclass %in% c("cell.type", "cell.subtype")) {
             factor_breaks <- names(which(table(proj[[input$de_metaclass]]) >= 10)) 
@@ -428,8 +435,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         
         withProgress(message = 'Processing...', {
             incProgress(1/2)
-            test_method = "sseq"
-            
             test_group <- de_idx$group_name[gidx]
             test_group[which(test_group == "")] <- "Background"
             test_idx <- de_idx$idx_list[gidx]
@@ -441,13 +446,25 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
-            #assign("cur_cds", cur_cds, env =.GlobalEnv)
-            #assign("test_clus", test_clus, env=.GlobalEnv)
-            prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0)
+            assign("cur_cds", cur_cds, env = .GlobalEnv)
+            assign("test_clus", test_clus, env=.GlobalEnv)
+            if(input$de_method == "sseq") {
+                test_method = "sseq"
+                prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0, id_col = id_col, name_col = name_col)
+                de_list <- lapply(prioritized_genes, function(x) {
+                    x %>% dplyr::filter(significant == TRUE) %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
+                })
+            } else if(input$de_method == "chi") {
+                test_method = "chi-square"
+                prioritized_genes <- run_chisq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, fdr= input$de_pval_cutoff, detRate=.05, id_col = id_col, name_col = name_col)
+                prioritized_genes <- lapply(prioritized_genes, function(x) {
+                    x$LFC_abs <- abs(log2(x$proportion1/x$proportion2))
+                    x %>% dplyr::filter(LFC_abs >= input$de_lfc_cutoff)
+                })
+                de_list <- prioritized_genes
+            }
         })
-        de_list <- lapply(prioritized_genes, function(x) {
-            x %>% dplyr::filter(significant == TRUE) %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
-        })
+
         updateSelectInput(session, "de_hmap_colorBy", selected = input$de_metaclass)
         de_res$sample <- input$de_sample
         de_res$metaclass <- input$de_metaclass
@@ -461,28 +478,26 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         de_res$feature_idx <- gene_idx
     })
     
-    observe({
-        req(!is.null(input$de_filter_tf))
-        isolate({
+    observeEvent(input$de_filter, {
             de_res$de_list <- lapply(de_res$deg, function(x) {
-                tbl <- x %>% dplyr::filter(significant == TRUE) %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
-                if(input$de_filter_tf) {
-                    if(organism == "mmu") {
-                        tbl <- tbl %>% dplyr::filter(gene_name %in% tf_mouse$name)
-                    } else if(organism == "hsa"){
-                        tbl <- tbl %>% dplyr::filter(gene_name %in% tf_human$name)
-                    }
+                if(de_res$test_method == "sseq") {
+                    tbl <- x %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj, significant)
+                } else {
+                    tbl <- x
                 }
+                if(input$de_filter == "significant") {
+                    tbl <- tbl %>% dplyr::filter(significant == TRUE)
+                } else { # Add human symbol for GSEA
+                    tbl$human_symbol <- mouse_to_human_symbol(tbl$gene_name, in.type = "mm", HMD_HumanPhenotype)
+                }
+
+                # if(input$de_filter == "enh") {
+                #     tbl <- tbl[grepl("ENSMUSR", tbl[[name_col]]), ]
+                # } else if(input$de_filter == "tss") {
+                #     tbl <- tbl[!grepl("ENSMUSR", tbl[[name_col]]) & !grepl("^chr", tbl[[name_col]]) & !is.na(tbl[[name_col]]), ]
+                # } 
                 return(tbl)
             })
-        })
-    })
-    
-    
-    output$de_hmap_ui <- renderUI({
-        ns <- session$ns
-        req(de_res$deg)
-        plotOutput(ns("de_hmap"), height="600px") 
     })
     
     
@@ -511,7 +526,8 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     })
     
     observe({
-        req(de_res$deg, input$hmap_dscale)
+        req(de_res$de_list, input$hmap_dscale)
+        assign("de_res", reactiveValuesToList(de_res), env = .GlobalEnv)
         if(sum(sapply(de_res$de_list, nrow)) == 0) return()
         cur_list <- sclist$clist
         #isolate({
@@ -544,54 +560,31 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             de_res$scale = F
         }
     })
-
+    
     output$de_hmap <- renderPlot({
         req(de_res$de_list)
-        #shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
-        #if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
-        if(sum(unlist(lapply(de_res$deg, function(x)x$significant))) < 2) return()
+        # shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
+        # if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
+
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
                 dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
             } else {
                 dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
             }
-            rownames(dat) <- make.unique(as.character(fData(eset)[[1]][match(rownames(dat), rownames(fData(eset)))]))
-            de_res$hmap<-gbm_pheatmap2(dat,
-                                       genes_to_plot = de_res$deg,
-                                       cells_to_plot=de_res$cells_to_plot,
-                                       group=de_res$plot_group,
-                                       group_colour=de_res$group_colour,
-                                       log=F, pseudocount = input$hmap_pseudoc,
-                                       scale = de_res$scale,
-                                       heatmap_color = de_res$heatmap_color,
-                                       n_genes=input$hmap_numg, fontsize=8, limits=c(input$hmap_limitlow, input$hmap_limithigh))
-        })
-        grid::grid.draw(de_res$hmap$gtable)
-    })
-    
-    output$de_hmaply <- renderPlotly({
-        req(de_res$de_list)
-        #assign("de_res", reactiveValuesToList(de_res), env=.GlobalEnv)
-        withProgress(message="Rendering heatmap..", {
-            if(input$de_hmap_scale == "log2") {
-                dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
-            } else {
-                dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
-            }
-            rownames(dat) <- make.unique(as.character(fData(eset)$symbol[match(rownames(dat), fData(eset)$id)]))
-            return(
-                heatmaply_plot(dat,
-                               genes_to_plot = de_res$deg,
-                               cells_to_plot=de_res$cells_to_plot,
-                               group=de_res$plot_group,
-                               group_colour=de_res$group_colour,
-                               log=F, pseudocount = input$hmap_pseudoc,
-                               scale = de_res$scale,
-                               heatmap_color = de_res$heatmap_color,
-                               n_genes=input$hmap_numg, fontsize=6, limits=c(input$hmap_limitlow, input$hmap_limithigh)) %>%
-                    plotly::layout(margin = list(l = 60, b = 30))
-            )
+            rownames(dat) <- make.unique(as.character(fData(eset)[[name_col]][match(rownames(dat), rownames(fData(eset)))])) # Deal with non-unique features later!!
+            isolate({
+                de_res$hmap<-gbm_pheatmap2(dat,
+                                           genes_to_plot = as.character(unlist(lapply(de_res$de_list, function(x) {x[["gene_name"]][1:min(input$hmap_numg, nrow(x))]}))),
+                                           cells_to_plot=de_res$cells_to_plot,
+                                           group=de_res$plot_group,
+                                           group_colour=de_res$group_colour,
+                                           log=F, pseudocount = input$hmap_pseudoc,
+                                           scale = de_res$scale,
+                                           heatmap_color = de_res$heatmap_color,
+                                           n_genes=input$hmap_numg, fontsize=8, limits=c(input$hmap_limitlow, input$hmap_limithigh))
+                grid::grid.draw(de_res$hmap$gtable)
+            })
         })
     })
     
@@ -610,8 +603,12 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 shiny::tabPanel(title=nm,
                                 DT::renderDataTable({
                                     req(de_res$de_list)
-                                    DT::datatable(de_res$de_list[[nm]], selection = 'single') %>%
-                                        DT::formatRound(columns=c('common_mean', 'dispersion', 'log2fc', 'p', 'p_adj'), digits=3)
+                                    if(de_res$test_method == "sseq") {
+                                        DT::datatable(de_res$de_list[[nm]], selection = 'single') %>%
+                                            DT::formatRound(columns=c('common_mean', 'dispersion', 'log2fc', 'p', 'p_adj'), digits=3)
+                                    } else {
+                                        DT::datatable(de_res$de_list[[nm]], selection = 'single') 
+                                    }
                                 })
                 )
             })
@@ -641,14 +638,16 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         req(de_res$deg)
         fluidRow(
             column(6),
-            column(3, checkboxInput(ns("de_filter_tf"), "Filter for TFs", value = F)),
+            column(3, selectInput(ns("de_filter"), NULL, choices = c("Show only significant"="significant" ,
+                                                                     "Show stats for all genes" = "all"
+                                                                     ), selected= "significant")),
             column(3, downloadButton(ns("download_de_res"), "Download DE Table", class = "btn_rightAlign"))
         )
     })
     
     output$download_de_res <- downloadHandler(
         filename = function() {
-            paste(input$de_sample, "_", paste0(de_idx$group_name, collapse="_vs_"), "_", Sys.Date(), '_deg.xlsx', sep='')
+            paste(input$de_sample, "_", paste0(de_idx$group_name, collapse="_vs_"), "_", Sys.Date(), '_de', "_", input$de_filter, '.xlsx', sep='')
         },
         content = function(con) {
             req(de_res$de_list)
@@ -700,7 +699,11 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         ## GO
         withProgress(message = 'Enrichment test in progress...', {
             incProgress(1/2)
-            enrich_list <- compute_go(de_res$de_list, bg_list = de_res$feature_data[[1]], type = input$go_type, organism = organism)
+            # only compute enrichment for significant deg
+            de_list <- lapply(de_res$de_list, function(x) {
+                x %>% dplyr::filter(significant == TRUE)
+            })
+            enrich_list <- compute_go(de_list, bg_list = de_res$feature_data[[name_col]], type = input$go_type, organism = organism, idcol = "gene_name")
             de_res$enrich_list <- enrich_list
             de_res$enrich_type <- input$go_type
         })

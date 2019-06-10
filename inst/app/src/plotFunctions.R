@@ -9,15 +9,14 @@ factor_color_opt <- function() {
 get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
 {
     unq <- unique(labels)
-    maxCol <- min(length(unq), maxCol)
     hmcol <- RColorBrewer::brewer.pal(maxCol, pal)
     if(nogrey) {
         hmcol <- hmcol[!hmcol %in% c("#999999","#B3B3B3")]
     }
     colv <- rep(NA, length(labels))
     #if (length(unq) > maxCol) {
-    cp <- colorRampPalette(hmcol)
-    hmcol <- cp(length(unq))
+        cp <- colorRampPalette(hmcol)
+        hmcol <- cp(length(unq))
     #}
     for (i in 1:length(unq)) {
         colv[labels == unq[i]] <- hmcol[i]
@@ -421,7 +420,7 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     }
     colnames(df) <- "expression_level"
     df <- cbind(df, meta)
-    
+
     if(order.by == "mean") {
         group_mean <- df %>% dplyr::group_by_at(group.by) %>% dplyr::summarize(mean = mean(expression_level))
         group_order <- group_mean[[group.by]][order(group_mean$mean, decreasing = T)]
@@ -429,12 +428,12 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     }
     
     g1 <- ggplot(df, aes_string(x=group.by, y="expression_level"))
+    
+    g1 <- g1 + geom_point(position=position_jitter(w=0.1,h=0), size = pointSize, aes_string(colour = group.by, group = group.by))
     if(style == "box") {
-        g1 <- g1 + geom_boxplot(aes_string(fill = group.by, alpha = 0.2), outlier.size = 1, outlier.stroke = 0, outlier.alpha = .2)
+        g1 <- g1 + geom_boxplot(aes_string(fill = group.by, alpha = 0.2))
     } else if(style == "violin") {
-        g1 <- g1 + geom_violin(aes_string(fill = group.by, alpha = 0.2), trim = T, scale = "width")
-    } else if(style == "points") {
-        g1 <- g1 + geom_jitter(size = pointSize, aes_string(colour = group.by))
+        g1 <- g1 + geom_violin(aes_string(fill = group.by, alpha = 0.2), trim = F)
     }
     
     if(!is.null(names(pal))) {
@@ -465,11 +464,9 @@ feature_plot <- function(df, selected_gene, group.by = "sample", meta = NULL, pa
     if(log_scale) {
         g1 <- g1 + scale_y_log10(breaks=c(25,100,400))
     }
-    
+
     return(g1 + monocle:::monocle_theme_opts())
 }
-
-
 
 #' @export
 plotGraph <- function(g, color.by=NULL, pal=NULL, label=NULL, alpha = NULL, type = NULL, background="grey20", border.size = 0.1, node.text.size = 1, legend.title = waiver()) {

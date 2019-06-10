@@ -36,7 +36,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                         )
                        ),
                        uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = gene_symbol_choices, multiple = T),
+                       selectizeInput(ns("gene_list"), "Search Gene:", choices = NULL, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
                        uiOutput(ns("data_highlight"))
                    ),
@@ -65,7 +65,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                               circle = T, label ="Download Plot", tooltip=T, right = T,
                                               icon = icon("download"), size = "xs", status="success", class = "btn_rightAlign"),
                               uiOutput(ns("g_limit_ui")),
-                              uiOutput(ns("v_limit_ui"))
+                              uiOutput(ns("v_limit_ui")),
+                              uiOutput(ns("factor_pie_ui"))
                        )
                    ),
                    uiOutput(ns("plot_ui")) %>% withSpinner()
@@ -77,7 +78,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             wellPanel(
                 fluidRow(
                     column(3, uiOutput(ns("bp_sample_ui"))),
-                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected")),
+                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = NULL, selected = NULL)),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
                     column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
                 ),
@@ -215,7 +216,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         })
     })
     
-    #updateSelectizeInput(session, "gene_list", "Search Gene:", choices = gene_symbol_choices, selected = NULL, server=T)
+    updateSelectizeInput(session, "gene_list", "Search Gene:", choices = feature_options$features, selected = NULL, server=T)
 
     output$plot_ui <- renderUI({
         ns <- session$ns
@@ -281,12 +282,13 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             names(factors) <- factors
             ui1 <- selectInput(ns("factor_compo"), "Choose Cells:", choices = factors, multiple = T)
         } else if(input$proj_colorBy != "gene.expr") {
+            #assign("ev",reactiveValuesToList(ev), env = .GlobalEnv)
             num_range <- range(ev$value, na.rm = T)
             num_range[1] <- floor_dec(num_range[1],2)
             num_range[2] <- ceiling_dec(num_range[2],2)
             ui1 <- sliderInput(ns("numeric_range"), label = "Select Range", min = num_range[1], max = num_range[2], value = num_range)
         } else if(input$proj_colorBy == "gene.expr"){
-            curg <- gene_id_symbol[input$gene_list]
+            curg <- gene_symbol_choices[input$gene_list]
             if(length(curg)){
                 options <- list(
                     "All cells" = "nulv"
@@ -412,7 +414,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 req(input$color_pal %in% numeric_bin_color_opt())
                 factor_color <- get_numeric_bin_color(levels(proj[[input$proj_colorBy]]), palette = input$color_pal)
                 names(factor_color) <- levels(proj[[input$proj_colorBy]])
-            }  else {
+            } else {
                 req(input$color_pal %in% factor_color_opt())
                 factor_color <- get_factor_color(unique(proj[[input$proj_colorBy]]), pal=input$color_pal, maxCol = 9)
                 if(input$proj_colorBy == "to.filter") { # special case
@@ -444,7 +446,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                     #print(paste0(input$gene_list, ": ", input$g_limit))
                     limits <- c(0,input$g_limit)
                 } 
-                if(!is.null(input$cell_expr_gene) && !is.null(ev$gene_values)) {
+                if(!is.null(input$cell_expr_gene)) {
                     if(input$cell_expr_gene!="nulv") {
                         proj$alpha <- ifelse(rowSums(ev$gene_values > 0) == ncol(ev$gene_values), "f", "t")
                     }
@@ -522,17 +524,17 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Do not support more than 2 genes.")
             return()
         }
-        if(any(duplicated(gene_id_symbol[input$gene_list]))) {
+        if(any(duplicated(input$gene_list))) {
             session$sendCustomMessage(type = "showalert", "Duplicated gene name not allowed.")
             return()
         }
-        gnames <- gene_id_symbol[input$gene_list]
+        gnames <- gene_symbol_choices[input$gene_list]
         if(input$log_transform_gene == "log2") {
-            gvals <- t(as.matrix(eset@assayData$norm_exprs[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(eset@assayData$norm_exprs[gnames,ev$vis@idx, drop=F]))
         } else if(input$log_transform_gene == "raw") {
-            gvals <- t(as.matrix(exprs(eset)[input$gene_list,ev$vis@idx, drop=F]))
+            gvals <- t(as.matrix(exprs(eset)[gnames,ev$vis@idx, drop=F]))
         }
-        colnames(gvals) <- gnames
+        colnames(gvals) <- input$gene_list # duplicates?
         ev$gene_values <- gvals
     })
 
@@ -568,7 +570,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
 
     pp1 <- reactive({
         req(length(pvals$plot_col) == 2, pvals$plot_class)
-        #assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
+        assign("pvals", reactiveValuesToList(pvals),env=.GlobalEnv)
         if(pvals$plot_class == "factor") {
             pp_factor()
         } else if(pvals$plot_class == "numeric") {
@@ -820,8 +822,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                     )
                 ),
                 fluidRow(
-                    column(6
-                           #checkboxInput(ns("compdimr_batch"), tags$b("Correct batch"), F)
+                    column(6,
+                           checkboxInput(ns("compdimr_batch"), tags$b("Correct batch"), F)
                     ),
                     column(6, actionButton(ns("compdimr_run"), "Compute", class = "btn-info btn_rightAlign"))
                 )
@@ -947,7 +949,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         if(length(input$gene_list) == 1) {
             gvals <- ev$gene_values[,1]
             glim <- round(quantile(gvals[gvals!=0], .975),1)
-            if(!is.na(glim) && glim < 2) glim = 2 # Minimal max-cut
+            if(!is.na(glim) && glim < 2) glim = 2 else glim = 1 # Minimal max-cut 
             dropdownButton2(inputId=ns("val_cutoff"),
                             width = "500px",
                             plotOutput(ns("gene_histogram_plot")),
@@ -1004,6 +1006,44 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         abline(v = input$v_limit, col=c("red"), lty=c(2), lwd=c(3))
     })
     
+    
+    
+    output$factor_pie_ui <- renderUI({
+        ns <- session$ns
+        req(input$proj_colorBy %in% c(ev$factor_cols))
+        dropdownButton2(inputId=ns("factor_pie_drop"),
+                        width = "500px",
+                        plotOutput(ns("factor_pie_plot")),
+                        DT::dataTableOutput(ns("factor_comp_table")),
+                        circle = T, label ="Pie chart of factor composition", tooltip=T, right = T,
+                        icon = icon("chart-pie"), size = "xs", status="info", class = "btn_rightAlign")
+    })
+    
+    output$factor_comp_table <- DT::renderDataTable({
+        compos<-as.data.frame(table(pvals$proj[[pvals$proj_colorBy]]))
+        colnames(compos) <- c(pvals$proj_colorBy, "Freq")
+        compos$Fraction <- round(compos$Freq/sum(compos$Freq),3)
+        DT::datatable(compos, rownames = F)
+    })
+    
+    pp_pie<-reactive({
+        req(pvals$proj_colorBy)
+        compos<-as.data.frame(table(pvals$proj[[pvals$proj_colorBy]]))
+        colnames(compos) <- c(pvals$proj_colorBy, "Freq")
+        compos$Fraction <- round(compos$Freq/sum(compos$Freq),3)
+        compos$label <- scales::percent(compos$Fraction)
+        ggplot(data=compos,aes_string(x=1, y="Fraction", fill=pvals$proj_colorBy))+
+            geom_bar(stat="identity", width = 1)+
+            coord_polar("y")+
+            scale_fill_manual(values=pvals$factor_color) + 
+            theme_void()+
+            geom_text(aes(label=label),  position = position_stack(vjust = 0.5)) 
+    })
+    
+    output$factor_pie_plot <- renderPlot({
+        pp_pie()
+    })
+    
     observeEvent(input$zoom_in, {
         req(ev$cells)
         if(input$zoom_name == "") {
@@ -1041,7 +1081,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         
         error_I <- 0
         tryCatch({
-            reticulate::import("umap")
+            #reticulate::import("umap")
         }, warning = function(w) {
         }, error = function(e) {
             error_I <<-1
@@ -1065,7 +1105,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             return()
         }
         if(input$compdimr_batch) {
-            resform <- "~as.factor(batch) + ~as.factor(batch) * raw.embryo.time"
+            resform <- "~as.factor(Dataset)"
         } else {
             resform <- NULL
         }
@@ -1076,12 +1116,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             incProgress(1/2)
             set.seed(2018)
             #assign("ev1cells", ev$cells, env=.GlobalEnv)
-            cds_oidx <- filter_cds(cds=eset[,ev$cells], min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
+            fd <- fData(eset[,ev$cells])[, c(1,2)]
+            colnames(fd) <- c("id", "gene_short_name")
+            cds_oidx <- newCellDataSet(cellData = exprs(eset[,ev$cells]), phenoData = new("AnnotatedDataFrame", data = pData(eset[,ev$cells])), featureData = new("AnnotatedDataFrame", data = fd))
+            pData(cds_oidx) <- pData(eset[,ev$cells])
+            cds_oidx <- filter_cds(cds=cds_oidx, min_detect=input$compdimr_mine, min_numc_expressed = input$compdimr_minc, min_disp_ratio=input$compdimr_disp)
             #assign("cds1", cds_oidx, env=.GlobalEnv)
             irlba_res <- compute_pca_cds(cds_oidx, num_dim =input$compdimr_numpc, scvis=NULL, use_order_gene = T, residualModelFormulaStr = resform, return_type="irlba")
             pca_proj <- as.data.frame(irlba_res$x)
             rownames(pca_proj) <- colnames(cds_oidx)
-            newvis <- new("cvis", idx = match(ev$cells, colnames(eset)))
+            newvis <- new("Cello", idx = match(ev$cells, colnames(eset)))
             newvis@proj[["PCA"]] <- pca_proj
             if(grepl("UMAP", input$compdimr_type)) {
                 n_component = ifelse(grepl("2D", input$compdimr_type), 2, 3)
@@ -1103,7 +1147,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
     })
     
-    #updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = c("No gene selected", gene_symbol_choices), selected = "No gene selected", server=T)
+    updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = feature_options$features, server=T)
     
     output$bp_sample_ui <- renderUI({
         ns <- session$ns
@@ -1148,7 +1192,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     
     output$bp_colorBy_ui <- renderUI({
         ns <- session$ns
-        selectInput(ns("bp_colorBy"), "Color By:", choices = bp_colorBy_choices)
+        selectInput(ns("bp_colorBy"), "Color By:", choices = c(bp_colorBy_choices, "Cluster"))
     })
     
     output$bp_include_ui <- renderUI({
@@ -1187,7 +1231,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         dropdownButton2(inputId=ns("bp_plot_configure"),
                         fluidRow(
                             column(6, numericInput(ns("bp_downsample"), "Downsample #", min=2, max = 10000, value=500)),
-                            column(6, selectInput(ns("bp_plot_type"), "Plot Type", choices = list("Violin plot" = "violin", "Box plot" = "box", "Plot points" = "points")))
+                            column(6, selectInput(ns("bp_plot_type"), "Plot Type", choices = list("Box plot" = "box", "Violin plot" = "violin", "Plot points" = "points")))
                         ),
                         fluidRow(
                             column(6, numericInput(ns("bp_marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
@@ -1206,7 +1250,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     })
     
     bp1 <- reactive({
-        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% gene_symbol_choices)
+        req(input$bp_colorBy,input$bp_include, length(input$bp_gene) == 1, input$bp_gene != "No gene selected", input$bp_gene %in% feature_options[[1]])
         req(ev$sample == input$bp_sample, ev$sample == input$bp_include_I) # IMPORTANT, this controls the sync between sample choices in the explorer and the featurePlot, and prevent double rendering
         cur_group <- ev$meta[[input$bp_colorBy]]
         # Downsample cells from each cell type
@@ -1228,14 +1272,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         factor_color[["unannotated"]] <- "lightgrey"
         
         colorBy_name <-  pmeta_attr$meta_name[which(pmeta_attr$meta_id == input$bp_colorBy)]
-        curg <- input$bp_gene
-
+        curg <- gene_symbol_choices[input$bp_gene]
         if(input$bp_log_transform_gene == "log2") {
             df <- as.data.frame(as.matrix(eset@assayData$norm_exprs[curg, ev$vis@idx[cur_idx]]))
         } else {
             df <- as.data.frame(as.matrix(exprs(eset)[curg, ev$vis@idx[cur_idx]]))
         }
-        feature_plot(df, gene_id_symbol[input$bp_gene], 
+        
+        # assign("df1", df, env = .GlobalEnv)
+        # assign("cur_meta1", cur_meta, env = .GlobalEnv)
+        feature_plot(df, input$bp_gene, 
                      group.by = input$bp_colorBy, 
                      meta = cur_meta, 
                      pal = factor_color, 

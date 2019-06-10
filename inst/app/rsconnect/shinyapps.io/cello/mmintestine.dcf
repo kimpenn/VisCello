@@ -1,0 +1,12 @@
+name: mmintestine
+title: mmintestine
+username:
+account: cello
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 958522
+bundleId: 2141198
+url: https://cello.shinyapps.io/mmintestine/
+when: 1560114513.25833
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,18 +1,18 @@
 
 
-# Code from CellrangerRkit package
+# Code adapted from CellrangerRkit package
 #' @export
-runsSeq <- function(dat, group, fdata, order_by, p_cutoff, min_mean, min_log2fc) {
+runsSeq <- function(dat, group, fdata, order_by, p_cutoff, min_mean, min_log2fc, id_col = "gene_id", name_col = "gene_name") {
     t_mat <- t(dat)
     uni_labels <- sort(unique(group))
     cat("Computing differential expression parameters...\n")
     sseq_params <- compute_sseq_params2(t_mat)
     ordered_genes <- lapply(uni_labels, function(cluster_label) {
         de_result <- get_ordered_gene_list_sseq2(fdata, group,
-                                                cluster_label, sseq_params, t_mat)
+                                                cluster_label, sseq_params, t_mat, id_col = id_col, name_col= name_col)
         de_result$ix <- 1:nrow(de_result)
-        de_result$id <- de_result$gene_id
-        de_result$symbol <- de_result$gene_name
+        de_result$id <- de_result[[id_col]]
+        de_result$symbol <- de_result[[name_col]]
         de_result$significant <- with(de_result, common_mean >=
                                           min_mean & p_adj < p_cutoff & log2fc >= min_log2fc)
         if (order_by == "pvalue") {
@@ -61,13 +61,13 @@ compute_sseq_params2 <- function (x, zeta_quantile = 0.995)
 }
 
 #' @export
-get_ordered_gene_list_sseq2 <- function (fdata, cluster_labels, test_ID, sseq_params, t_mat)
+get_ordered_gene_list_sseq2 <- function (fdata, cluster_labels, test_ID, sseq_params, t_mat, id_col = "gene_id", name_col = "gene_name")
 {
     cat("Comparing Cluster", test_ID, "against the other clusters...\n")
     group0 <- cluster_labels == test_ID
     group1 <- cluster_labels != test_ID
     de_result <- sseq_differential_expression2(t_mat, group0,
-                                              group1, sseq_params, gene_ids = rownames(fdata), gene_symbols = fdata[[1]])
+                                              group1, sseq_params, gene_ids = fdata[[id_col]], gene_symbols = fdata[[name_col]])
     return(de_result)
 }
 
@@ -140,15 +140,10 @@ gbm_pheatmap2 <- function (dat, genes_to_plot, cells_to_plot, n_genes = 50, grou
         if ("significant" %in% names(genes_to_plot[[1]])) {
             gene_indices <- unlist(lapply(genes_to_plot, function(x) with(x,
                                                                           head(ix[significant], n_genes))))
-            gene_grouping <- unlist(lapply(names(genes_to_plot),
-                                           function(nm) rep(nm, with(genes_to_plot[[nm]],
-                                                                     length(head(ix[significant], n_genes))))))
         }
         else {
             gene_indices <- unlist(lapply(genes_to_plot, function(x) x$ix[1:n_genes]))
-            gene_grouping <- rep(names(genes_to_plot), each = n_genes)
         }
-        gene_annotation <- data.frame(ID = as.factor(gene_grouping))
     }
     gene_indices <- gene_indices[!is.na(gene_indices)]
     if(is.null(cells_to_plot)) {

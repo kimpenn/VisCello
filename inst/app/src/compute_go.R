@@ -2,19 +2,19 @@
 
 
 #' @export
-compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel", "hsa")) {
+compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel", "hsa"), idcol = "gene_name") {
     if(organism == "cel") {
         orgdb <- "celegans.db"
         fromType = "SYMBOL"
-        idcol <- "gene_name"
+        idcol <- idcol
     } else if(organism =="mmu") {
         orgdb <- "org.Mm.eg.db"
         fromType = "SYMBOL"
-        idcol <- "gene_name"
+        idcol <- idcol
     } else if(organism == "hsa") {
         orgdb <- "org.Hs.eg.db"
         fromType = "SYMBOL"
-        idcol <- "gene_name"
+        idcol <- idcol
     }
 
     bg.df <- bitr(bg_list, fromType = fromType,
@@ -85,6 +85,17 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
 
 
 
+#' export
+mouse_to_human_symbol <- function(gene_symbol, in.type = c("mm", "hs"), HMD_HumanPhenotype = NULL) {
+    hs_symbol <- HMD_HumanPhenotype$V1
+    mm_symbol <- HMD_HumanPhenotype$V5
+    
+    if(in.type == "mm") {
+        return(hs_symbol[match(gene_symbol, mm_symbol)])
+    } else if(in.type == "hs"){
+        return(mm_symbol[match(gene_symbol, hs_symbol)])
+    }
+}
 
 
 
