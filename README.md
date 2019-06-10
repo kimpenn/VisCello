@@ -109,8 +109,6 @@ eset <- new("ExpressionSet",
              featureData = new("AnnotatedDataFrame", data = fmeta))
 ```
 
-**Note future versions of VisCello will likely switch to using SingleCellExperiment object instead of ExpressionSet, but will be backward compatible.**
-
 ## Prepare Cello object
 
 `Cello` object allows embedding of multiple dimension reduction results for different subsets of cells. This allows "zoom-in" analysis on subset of cells as well as differential expression analysis on locally defined clusters. The basic structure of `Cello` is as follows:
