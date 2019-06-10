@@ -203,7 +203,17 @@ viscello()
 
 ## Host VisCello on a server
 
-To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.com/products/shiny/shiny-server/>) or use the shinyapps.io service (<https://www.shinyapps.io/>). Start Viscello on server by calling above code.
+To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.com/products/shiny/shiny-server/>) or use the shinyapps.io service (<https://www.shinyapps.io/>). 
+Note you should first get VisCello.base installed from github, set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
+
+``` r
+install_github("qinzhu/VisCello.base") # STEP 1
+options(repos = BiocManager::repositories()) # STEP 2
+rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # STEP 3 change account to your own account
+```
+
+
+Please cite VisCello properly if you use VisCello to host your dataset.
 
 ## Cite VisCello
 
