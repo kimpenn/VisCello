@@ -48,11 +48,8 @@ norm_df <- read.table("data-raw/GSE72857_log2norm.txt")
 pmeta <- read.table("data-raw/GSE72857_pmeta.txt")
 fmeta <- read.table("data-raw/GSE72857_fmeta.txt")
 
-# Feature meta MUST have rownames the same as the rownames of expression matrix - this can be gene name or gene id. 
-# The first column of feature meta must be the gene name (symbol). Note you can have duplicated gene name in the first column but not duplicated rownames.
+# Feature meta MUST have rownames the same as the rownames of expression matrix - this can be gene name or gene id (but must not have duplicates). 
 rownames(fmeta) <- fmeta$id
-fmeta$id <- NULL   # Make gene symbol the first column
-sum(duplicated(fmeta$symbol))
 
 eset <- new("ExpressionSet",
              assayData = assayDataNew("environment", exprs=Matrix(as.matrix(raw_df), sparse = T), norm_exprs = Matrix(as.matrix(norm_df), sparse = T)),
@@ -68,11 +65,12 @@ for(c in factor_cols) {
     pData(eset)[[c]] <- factor(pData(eset)[[c]])
 }
 
-saveRDS(eset, "inst/app/data/eset.rds")
+saveRDS(eset, "inst/app/data/eset.rds") 
 ```
 
-Now the expression data and meta information required by VisCello is in place.
+Note that you can save `eset.rds` to any place if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
 
+Now the expression data and meta information required by VisCello is in place.
 
 ### [Alternative] Convert common objects to ExpressionSet
 
@@ -154,7 +152,7 @@ Create a list to store `Cello` objects and save to data location.
 ``` r
 clist <- list()
 clist[["All Data"]] <- cello
-saveRDS(clist, "inst/app/data/clist.rds") # Note if you change the file name from clist.rds to other name, you need to change the readRDS code in global.R
+saveRDS(clist, "inst/app/data/clist.rds") 
 ```
 
 You can create multiple `Cello` hosting visualization information of different subsets of the cells. Say people want to zoom in onto GMP for further analysis:
@@ -173,59 +171,46 @@ clist[[zoom_type]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") 
 ```
 
+Note that you can save `clist.rds` to any place if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
+
 Now all the data required to run cello has been preprocessed.
 
-## Customize visualization paramaters if necessary
 
-Finnally, you can set which meta data you want to show to the user and what should be their default color palatte and data scale in `global.R`.
+## Prepare configure file and launch
 
-For example, change this code to exclude meta columns that you don't want to show the user.
+Download example configure file from: https://github.com/qinzhu/VisCello/blob/master/inst/app/data/config.yml
 
-``` r
-meta_order <- meta_order[!meta_order %in% c("Amp_batch_ID", "well_coordinates", "Number_of_cells", "Plate_ID", "Batch_desc", "Pool_barcode", "Cell_barcode", "RMT_sequence", "no_expression")]
-```
-
-Set default color palatte and data scale by editting this chunk of code
-
-``` r
-# Edit if necessary, Which meta to show 
-pmeta_attr$dpal <- ifelse(pmeta_attr$is_numeric, "RdBu", "Set1")
-pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
-pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
-```
-
-## Compile (install) the VisCello package
-
-Open R and do the following:
-
-``` r
-setwd("/Users/yourname/Download/") # Replace the path with path to PARENT folder of VisCello
-install.packages("devtools")
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install("monocle", update = F, ask=F)
-BiocManager::install("clusterProfiler", update = F, ask=F)
-BiocManager::install("org.Mm.eg.db", update = F, ask=F)
-BiocManager::install("org.Hs.eg.db", update = F, ask=F)
-devtools::install_local("VisCello.base")
-```
+-   `study_name`: Appear as title for the app.
+-   `study_description` : Appear as footer for the app.
+-   `eset_path` : Where you save eset.rds
+-   `clist_path` : Where you save clist.rds
+-   `organism` : support mouse, human and c. elegans.
+-   `feature_name_column` : important! What's the column name of fData(eset) that corresponds to gene symbol.
+-   `feature_id_column` : Optional, What's the column name of fData(eset) that corresponds to gene id, set same as `feature_name_column` if you don't have gene id.
 
 Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
 library(VisCello)
-cello()
+cello(config_file = "~/path_to_config.yml")
 ```
+
 
 ## Host VisCello on a server
 
 To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.com/products/shiny/shiny-server/>) or use the shinyapps.io service (<https://www.shinyapps.io/>). 
-Note you should first get VisCello.base installed from github, set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
 
+STEP 1: Install VisCello from github
 ``` r
 install_github("qinzhu/VisCello") # STEP 1
-options(repos = BiocManager::repositories()) # STEP 2
-rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # STEP 3 change account to your own account
+```
+
+STEP 2: **IMPORTANT** Git clone VisCello from github, replace `inst/app/data/eset.rds`, `inst/app/data/clist.rds`, `inst/app/data/config.yml` with your own data.
+
+STEP 3: Set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
+``` r
+options(repos = BiocManager::repositories()) 
+rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # change account to your own account
 ```
 
 
@@ -234,6 +219,8 @@ Please cite VisCello properly if you use VisCello to host your dataset.
 ## Cite VisCello
 
 Packer, J.S., Zhu, Q., Huynh, C., Sivaramakrishnan, P., Preston, E., Dueck, H., Stefanik, D., Tan, K., Trapnell, C., Kim, J. and Waterston, R.H., 2019. A lineage-resolved molecular atlas of C. elegans embryogenesis at single cell resolution. BioRxiv, p.565549.
+
+
 
 Reference
 ---------

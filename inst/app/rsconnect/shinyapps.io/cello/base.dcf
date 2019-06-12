@@ -5,6 +5,6 @@ account: cello
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 974962
-bundleId: 2143655
+bundleId: 2147252
 url: https://cello.shinyapps.io/base/
-when: 1560202938.97657
+when: 1560309605.81954
