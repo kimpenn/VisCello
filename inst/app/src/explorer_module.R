@@ -172,7 +172,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         
         dropdownButton2(inputId=ns("plot_configure"),
                         fluidRow(
-                            column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, value = 1, step = 0.1)),
+                            column(6, numericInput(ns("marker_size"), "Point Size", min = 0.1, value = 2, step = 0.1)),
                             column(6, numericInput(ns("text_size"), "Text Size", min = 1, value = 3, step = 1))
                         ),
                         fluidRow(
