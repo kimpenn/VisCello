@@ -11,7 +11,7 @@ cello <- function(RStudio = F, config_file = NULL) {
     if(RStudio) {
         options(shiny.launch.browser = .rs.invokeShinyWindowViewer)
     }
-    app_path <- system.file("app", package='VisCello.base')
+    app_path <- system.file("app", package='VisCello')
     if(!is.null(config_file)) {
         .GlobalEnv$config_file <- config_file
     } else {
