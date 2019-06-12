@@ -949,7 +949,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         if(length(input$gene_list) == 1) {
             gvals <- ev$gene_values[,1]
             glim <- round(quantile(gvals[gvals!=0], .975),1)
-            if(!is.na(glim) && glim < 2) glim = 2 else glim = 1 # Minimal max-cut 
+            if(is.na(glim)) glim = 1
+            if(!is.na(glim) && glim < 2) glim = 2  # Minimal max-cut 
             dropdownButton2(inputId=ns("val_cutoff"),
                             width = "500px",
                             plotOutput(ns("gene_histogram_plot")),

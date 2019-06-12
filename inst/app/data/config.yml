@@ -1,0 +1,8 @@
+default:
+    study_name: "Myeloid Single Cell"
+    study_description: "Features data from Paul et al., 2015, Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors."
+    eset_path: "data/eset.rds"
+    clist_path: "data/clist.rds"
+    organism: "mmu" # choose from mmu (mouse), hsa (human) and cel (C.elegans)
+    feature_name_column: "symbol"
+    feature_id_column: "symbol" # Set this to be same as name col if feature id column not available

@@ -446,8 +446,6 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
-            assign("cur_cds", cur_cds, env = .GlobalEnv)
-            assign("test_clus", test_clus, env=.GlobalEnv)
             if(input$de_method == "sseq") {
                 test_method = "sseq"
                 prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0, id_col = id_col, name_col = name_col)
@@ -488,7 +486,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 if(input$de_filter == "significant") {
                     tbl <- tbl %>% dplyr::filter(significant == TRUE)
                 } else { # Add human symbol for GSEA
-                    tbl$human_symbol <- mouse_to_human_symbol(tbl$gene_name, in.type = "mm", HMD_HumanPhenotype)
+                    if(organism == "mmu") {
+                        tbl$human_symbol <- mouse_to_human_symbol(tbl$gene_name, in.type = "mm", HMD_HumanPhenotype)
+                    }
                 }
 
                 # if(input$de_filter == "enh") {

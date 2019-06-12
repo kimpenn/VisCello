@@ -1,6 +1,6 @@
 Using VisCello for Single Cell Data Visualization
 ================
-Qin Zhu, Kim Lab, University of Pennsylvania
+Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 
 ## Playground
@@ -11,7 +11,7 @@ You can also install this app locally with code below:
 ``` r
 devtools::install_github("qinzhu/VisCello.base") # install
 library(VisCello.base) # load
-viscello() # launch
+cello() # launch
 ```
 
 To put in your own dataset into VisCello for visualization, follow guidance below.
@@ -210,7 +210,7 @@ Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
 library(VisCello.base)
-viscello()
+cello()
 ```
 
 ## Host VisCello on a server

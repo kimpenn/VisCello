@@ -1,0 +1,10 @@
+name: base
+title:
+username:
+account: cello
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 974962
+bundleId: 2143655
+url: https://cello.shinyapps.io/base/
+when: 1560202938.97657

@@ -59,11 +59,6 @@ function() {
             explorer_ui("main"),
             
             tags$br(),
-            tags$br(),
-            tags$br(),
-            tags$br(),
-            tags$br(),
-            tags$br(),
             tags$br()
             #downloadButton('download_ct_tbl', 'Download',class = "btn_rightAlign")
         )
@@ -79,10 +74,14 @@ function() {
         tags$br()
     ),
 
-    footer = tagList(
-        tags$br(),
-        tags$br(),
-        tags$br(),
+    footer = tags$footer(
+        tags$p(study_info, style = "float:right;font-size:12px;color:grey;margin: 0px;clear:both;"),
+        tags$p("Powered by VisCello by QZ (https://github.com/qinzhu/VisCello) and R Shiny.", style = "float:right;font-size:12px;color:grey;margin: 0px;clear:both;"),
+        style = "
+              width:100%;
+              height:50px;   /* Height of the footer */
+              padding: 10px;
+              z-index: 1000;",
         tags$br()
     )
             )
