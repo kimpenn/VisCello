@@ -15,7 +15,7 @@ cello <- function(RStudio = F, config_file = NULL) {
     if(!is.null(config_file)) {
         .GlobalEnv$config_file <- config_file
     } else {
-        .GlobalEnv$config_file <- "data/config.yml"
+        .GlobalEnv$config_file <- paste0(app_path, "/data/config.yml")
     }
     shiny::runApp(app_path)
 }
