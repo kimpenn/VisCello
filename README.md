@@ -6,23 +6,27 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 ## Playground
 
 Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
-You can also install this app locally with code below:
+Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/
+
+Install this app locally with code below:
 
 ``` r
-devtools::install_github("qinzhu/VisCello.base") # install
-library(VisCello.base) # load
-cello() # launch
+devtools::install_github("qinzhu/VisCello") # install
+library(VisCello) # load
+cello() # launch with example data
 ```
 
 To put in your own dataset into VisCello for visualization, follow guidance below.
 
 ## General data requirement
 
-`VisCello` requires two main data object - an `ExpressionSet` object and a `Cello` object (or list of Cello objects).
+`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file.
 
-The `ExpressionSet` object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
+The **`ExpressionSet`** object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
 
-The `Cello` object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
+The **`Cello`** object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
+
+Lastly, a simple configuration file needs to be editted by user to let VisCello know where's `ExpressionSet` and `Cello` list of your data, and what's the name of study, etc.
 
 This vignette will describe the preprocessing step for inputing data into VisCello.
 
@@ -209,7 +213,7 @@ devtools::install_local("VisCello.base")
 Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
-library(VisCello.base)
+library(VisCello)
 cello()
 ```
 
@@ -219,7 +223,7 @@ To host VisCello on a server, you need either ShinyServer (<https://www.rstudio.
 Note you should first get VisCello.base installed from github, set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
 
 ``` r
-install_github("qinzhu/VisCello.base") # STEP 1
+install_github("qinzhu/VisCello") # STEP 1
 options(repos = BiocManager::repositories()) # STEP 2
 rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # STEP 3 change account to your own account
 ```
