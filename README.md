@@ -171,7 +171,7 @@ clist[[zoom_type]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") 
 ```
 
-Note that you can save `clist.rds` to any place if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
+Note that you can save `clist.rds` to any place (recommend same folder with eset.rds and config.yml for each study) if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
 
 Now all the data required to run cello has been preprocessed.
 
@@ -205,7 +205,7 @@ STEP 1: Install VisCello from github
 install_github("qinzhu/VisCello") # STEP 1
 ```
 
-STEP 2: **IMPORTANT** Git clone VisCello from github, replace `inst/app/data/eset.rds`, `inst/app/data/clist.rds`, `inst/app/data/config.yml` with your own data.
+STEP 2: **IMPORTANT** Git clone VisCello from github, replace `inst/app/data/eset.rds`, `inst/app/data/clist.rds`, `inst/app/data/config.yml` with your own data. Do not change path for eset.rds and clist.rds in config.yml.
 
 STEP 3: Set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
 ``` r

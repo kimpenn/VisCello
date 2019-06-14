@@ -9,13 +9,9 @@ library(shiny);library(shinyBS);library(shinyWidgets);library(shinycssloaders);l
 # Global.R
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-
-if(exists("config_file")) {
-    global_config <- config::get(file = config_file, use_parent = F)
-} else {
-    global_config <- config::get(file = "data/config.yml", use_parent = F)
-}
-
+if(!exists("global_config")) {
+    cello(run_app = F) # Load local config
+} 
 
 if(exists("eset", env = .GlobalEnv)) rm(eset, envir = .GlobalEnv)
 if(exists("clist", env = .GlobalEnv)) rm(clist, envir = .GlobalEnv)

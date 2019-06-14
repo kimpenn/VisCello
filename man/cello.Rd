@@ -4,7 +4,7 @@
 \alias{cello}
 \title{Launch App}
 \usage{
-cello(RStudio = F, config_file = NULL)
+cello(config_file = NULL, RStudio = F, run_app = T)
 }
 \description{
 Launch App

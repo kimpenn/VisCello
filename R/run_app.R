@@ -5,19 +5,22 @@
 #' cello()
 #' @import shiny
 #' @export
-cello <- function(RStudio = F, config_file = NULL) {
+cello <- function( config_file = NULL, RStudio = F,run_app = T) {
     Sys.setenv("R_MAX_NUM_DLLS"=180)
     cat("Launching VisCello...")
     if(RStudio) {
         options(shiny.launch.browser = .rs.invokeShinyWindowViewer)
     }
     app_path <- system.file("app", package='VisCello')
-    if(!is.null(config_file)) {
-        .GlobalEnv$config_file <- config_file
-    } else {
-        .GlobalEnv$config_file <- paste0(app_path, "/data/config.yml")
+    if(is.null(config_file)) {
+        config_file <- paste0(app_path, "/data/config.yml")
+    } 
+    
+    .GlobalEnv$global_config <- config::get(file = config_file, use_parent = F)
+
+    if(run_app) {
+        shiny::runApp(app_path)
     }
-    shiny::runApp(app_path)
 }
 
 
