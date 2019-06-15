@@ -5,17 +5,14 @@ lapply(list.files("src/", pattern = "\\.(r|R)$", recursive = F, full.names = TRU
 library(shiny);library(shinyBS);library(shinyWidgets);library(shinycssloaders);library(htmlwidgets);library(shinyBS);library(R.utils);library(purrr);library(ggplot2);library(RColorBrewer);library(reshape2);library(gridExtra);library(shinythemes);library(plotly);library(heatmaply);library(pheatmap);library(DT);library(dplyr);library(openxlsx);library(knitr);library(monocle);library(clusterProfiler);library(org.Mm.eg.db);library(org.Hs.eg.db);library(ggraph);library(tidygraph);library(limma);library(irlba);library(data.table);library(VisCello)
 
 
-
-# Global.R
-if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
-
 if(!exists("global_config")) {
-    cello(run_app = F) # Load local config
+    .GlobalEnv$global_config <- config::get(file = "data/config.yml", use_parent = F)
+    .GlobalEnv$mainTitle = paste0("VisCello - ",global_config$study_name)
+    .GlobalEnv$organism = global_config$organism
+    .GlobalEnv$study_info <- global_config$study_description
+    .GlobalEnv$name_col = global_config$feature_name_column
+    .GlobalEnv$id_col = global_config$feature_id_column
 } 
-
-if(exists("eset", env = .GlobalEnv)) rm(eset, envir = .GlobalEnv)
-if(exists("clist", env = .GlobalEnv)) rm(clist, envir = .GlobalEnv)
-if(exists("r_data", env = .GlobalEnv)) rm(r_data, envir = .GlobalEnv)
 
 tryCatch({
     .GlobalEnv$eset <- readRDS(global_config$eset_path)
@@ -24,11 +21,10 @@ tryCatch({
     stop("Cannot find eset or clist file, please check if the path in config.yml is correct.")
 })
 
-.GlobalEnv$mainTitle = paste0("VisCello - ",global_config$study_name)
-.GlobalEnv$organism = global_config$organism
-.GlobalEnv$study_info <- global_config$study_description
-.GlobalEnv$name_col = global_config$feature_name_column
-.GlobalEnv$id_col = global_config$feature_id_column
+
+
+# Global.R
+if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 meta_order <- c(colnames(pData(eset)), colnames(clist[[1]]@pmeta))
 names(meta_order) <- meta_order
