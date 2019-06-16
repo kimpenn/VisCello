@@ -16,7 +16,7 @@ cello <- function(data_path = paste0(system.file("app", package='VisCello'),"/da
     if(exists("clist", env = .GlobalEnv)) rm(clist, envir = .GlobalEnv)
     if(exists("r_data", env = .GlobalEnv)) rm(r_data, envir = .GlobalEnv)
     if(exists("global_config", env = .GlobalEnv)) rm(global_config, envir = .GlobalEnv)
-    cat(pate0("Data folder: ",data_path))
+    cat(paste0("Data folder: ",data_path))
     tryCatch({
         .GlobalEnv$global_config <- config::get(file = paste0(data_path, "/config.yml"), use_parent = F)
     }, error = function(x){

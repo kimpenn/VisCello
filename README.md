@@ -18,11 +18,24 @@ library(VisCello) # load
 cello() # launch with example data
 ```
 
+You can download an example dataset for VisCello from https://github.com/qinzhu/Celegans.L2.Cello
+
+```
+git clone https://github.com/qinzhu/Celegans.L2.Cello.git
+```
+
+then in R:
+
+```
+library(VisCello)
+cello("~/Downloads/Celegans.L2.Cello") # Change path if necessary
+```
+
 To put in your own dataset into VisCello for visualization, follow guidance below.
 
 ## General data requirement
 
-`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file. **All 3 files must be put inside the same data folder.** Each data folder represent one study.
+`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file. **All 3 files must be put inside the same data folder.** Each data folder represent one particular study.
 
 The **`ExpressionSet`** object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
 
