@@ -77,10 +77,8 @@ for(c in factor_cols) {
     pData(eset)[[c]] <- factor(pData(eset)[[c]])
 }
 
-saveRDS(eset, "inst/app/data/eset.rds") 
+saveRDS(eset, "your_data_folder/eset.rds") 
 ```
-
-Note that you can save `eset.rds` to any place if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
 
 Now the expression data and meta information required by VisCello is in place.
 
@@ -180,17 +178,15 @@ cello <- compute_tsne_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 2
 cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 2, umap_path = "data-raw/preprocess_scripts/python/umap.py") # Compute UMAP
 cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 3, umap_path = "data-raw/preprocess_scripts/python/umap.py") # 3D UMAP
 clist[[zoom_type]] <- cello
-saveRDS(clist, "inst/app/data/clist.rds") 
+saveRDS(clist, "your_data_folder/clist.rds") 
 ```
-
-Note that you can save `clist.rds` to any place (recommend same folder with eset.rds and config.yml for each study) if you don't want to deploy VisCello on ShinyServer. But if it is for deploy, you need to save to `inst/app/data/`.
 
 Now all the data required to run cello has been preprocessed.
 
 
 ## Prepare configure file and launch
 
-Download example configure file from: https://github.com/qinzhu/VisCello/blob/master/inst/app/data/config.yml
+Download example configure file from: https://github.com/qinzhu/Celegans.L2.Cello/blob/master/config.yml
 
 -   `study_name`: Appear as title for the app.
 -   `study_description` : Appear as footer for the app.
@@ -198,11 +194,13 @@ Download example configure file from: https://github.com/qinzhu/VisCello/blob/ma
 -   `feature_name_column` : important! What's the column name of fData(eset) that corresponds to gene symbol.
 -   `feature_id_column` : Optional, What's the column name of fData(eset) that corresponds to gene id, set same as `feature_name_column` if you don't have gene id.
 
+After updating this file, put it together with previously saved eset.rds and clist.rds
+
 Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
 library(VisCello)
-cello(data_path = "path_to_data_folder")
+cello(data_path = "your_data_folder")
 ```
 
 
@@ -215,14 +213,15 @@ STEP 1: Install VisCello from github
 install_github("qinzhu/VisCello") # STEP 1
 ```
 
-STEP 2: **IMPORTANT** Git clone VisCello from github, replace `inst/app/data/eset.rds`, `inst/app/data/clist.rds`, `inst/app/data/config.yml` with your own data. Do not change path for eset.rds and clist.rds in config.yml.
+STEP 2: **IMPORTANT** Git clone VisCello from github, replace `inst/app/data/eset.rds`, `inst/app/data/clist.rds`, `inst/app/data/config.yml` with your own data. 
+
+**ALSO, change first line in inst/app/global.R from viscello_DEPLOY = F to viscello_DEPLOY = T**.
 
 STEP 3: Set the repositories to bioconductor in R, and then only deploy the inst/app/ folder that contains your own data.
 ``` r
 options(repos = BiocManager::repositories()) 
-rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # change account to your own account
+rsconnect::deployApp("inst/app/", account = "cello", appName = "base") # change account to your own account, change app name to your own app name.
 ```
-
 
 Please cite VisCello properly if you use VisCello to host your dataset.
 
