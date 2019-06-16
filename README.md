@@ -11,6 +11,7 @@ Here's another app based on VisCello for interactive exploration of C. elegans e
 Install VisCello with code below:
 
 ``` r
+install.packages("devtools") 
 devtools::install_github("qinzhu/VisCello") # install
 library(VisCello) # load
 cello() # launch with example data

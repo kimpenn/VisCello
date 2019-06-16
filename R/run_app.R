@@ -5,28 +5,36 @@
 #' cello()
 #' @import shiny
 #' @export
-cello <- function(config_file = NULL, RStudio = F) {
+cello <- function(data_path = paste0(system.file("app", package='VisCello'),"/data"), RStudio = F) {
     Sys.setenv("R_MAX_NUM_DLLS"=180)
     cat("Launching VisCello...")
     if(RStudio) {
         options(shiny.launch.browser = .rs.invokeShinyWindowViewer)
     }
-    app_path <- system.file("app", package='VisCello')
+    
     if(exists("eset", env = .GlobalEnv)) rm(eset, envir = .GlobalEnv)
     if(exists("clist", env = .GlobalEnv)) rm(clist, envir = .GlobalEnv)
     if(exists("r_data", env = .GlobalEnv)) rm(r_data, envir = .GlobalEnv)
+    if(exists("global_config", env = .GlobalEnv)) rm(global_config, envir = .GlobalEnv)
+    cat(pate0("Data folder: ",data_path))
+    tryCatch({
+        .GlobalEnv$global_config <- config::get(file = paste0(data_path, "/config.yml"), use_parent = F)
+    }, error = function(x){
+        stop("Cannot find config.yml in data folder, please check if data_path is correct.")
+    })
     
-    
-    if(is.null(config_file)) {
-        config_file <- paste0(app_path,"/data/config.yml")
-    }  
-    .GlobalEnv$global_config <- config::get(file = config_file, use_parent = F)
     .GlobalEnv$mainTitle = paste0("VisCello - ",global_config$study_name)
     .GlobalEnv$organism = global_config$organism
     .GlobalEnv$study_info <- global_config$study_description
     .GlobalEnv$name_col = global_config$feature_name_column
     .GlobalEnv$id_col = global_config$feature_id_column
-    shiny::runApp(app_path)
+    tryCatch({
+        .GlobalEnv$eset <- readRDS(paste0(data_path, "/eset.rds"))
+        .GlobalEnv$clist <-readRDS(paste0(data_path, "/clist.rds"))
+    }, error = function(x){
+        stop("Cannot find eset or clist file in data folder, if data_path is correct.")
+    })
+    shiny::runApp(system.file("app", package='VisCello'))
 }
 
 

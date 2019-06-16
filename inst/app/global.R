@@ -1,25 +1,26 @@
 
-# for Deploy
+# For deploy, set F to T, replace inst/app/data/config.yml, clist.rds and eset.rds. Follow https://github.com/qinzhu/VisCello to deploy.
+viscello_DEPLOY = F
+
 lapply(list.files("src/", pattern = "\\.(r|R)$", recursive = F, full.names = TRUE), function(x){source(file = x)})
 
-library(shiny);library(shinyBS);library(shinyWidgets);library(shinycssloaders);library(htmlwidgets);library(shinyBS);library(R.utils);library(purrr);library(ggplot2);library(RColorBrewer);library(reshape2);library(gridExtra);library(shinythemes);library(plotly);library(heatmaply);library(pheatmap);library(DT);library(dplyr);library(openxlsx);library(knitr);library(monocle);library(clusterProfiler);library(org.Mm.eg.db);library(org.Hs.eg.db);library(ggraph);library(tidygraph);library(limma);library(irlba);library(data.table);library(VisCello)
-
-
-if(!exists("global_config")) {
+if(viscello_DEPLOY) {
+    library(shiny);library(shinyBS);library(shinyWidgets);library(shinycssloaders);library(htmlwidgets);library(shinyBS);library(R.utils);library(purrr);library(ggplot2);library(RColorBrewer);library(reshape2);library(gridExtra);library(shinythemes);library(plotly);library(heatmaply);library(pheatmap);library(DT);library(dplyr);library(openxlsx);library(knitr);library(monocle);library(clusterProfiler);library(org.Mm.eg.db);library(org.Hs.eg.db);library(ggraph);library(tidygraph);library(limma);library(irlba);library(data.table);library(VisCello)
+    
     .GlobalEnv$global_config <- config::get(file = "data/config.yml", use_parent = F)
     .GlobalEnv$mainTitle = paste0("VisCello - ",global_config$study_name)
     .GlobalEnv$organism = global_config$organism
     .GlobalEnv$study_info <- global_config$study_description
     .GlobalEnv$name_col = global_config$feature_name_column
     .GlobalEnv$id_col = global_config$feature_id_column
+    tryCatch({
+        .GlobalEnv$eset <- readRDS("data/eset.rds")
+        .GlobalEnv$clist <-readRDS("data/clist.rds")
+    }, error = function(x){
+        stop("Cannot find eset or clist file, please check if the path in config.yml is correct.")
+    })
 } 
 
-tryCatch({
-    .GlobalEnv$eset <- readRDS(global_config$eset_path)
-    .GlobalEnv$clist <-readRDS(global_config$clist_path)
-}, error = function(x){
-    stop("Cannot find eset or clist file, please check if the path in config.yml is correct.")
-})
 
 
 
