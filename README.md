@@ -5,11 +5,11 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 ## Playground
 
-Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
+* Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
 
-Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/
+* Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/
 
-You can install VisCello with code below:
+* You can install VisCello with code below:
 
 ``` r
 install.packages("devtools") 
@@ -18,7 +18,7 @@ library(VisCello) # load
 cello() # launch with example data
 ```
 
-You can download an example dataset for VisCello from https://github.com/qinzhu/Celegans.L2.Cello
+* You can download an example dataset for VisCello from https://github.com/qinzhu/Celegans.L2.Cello
 
 ```
 git clone https://github.com/qinzhu/Celegans.L2.Cello.git
@@ -31,21 +31,16 @@ library(VisCello)
 cello("~/Downloads/Celegans.L2.Cello") # Change path if necessary
 ```
 
-To put in your own dataset into VisCello for visualization, follow guidance below.
+* To put in your own dataset into VisCello for visualization, follow guidance below.
 
 ## General data requirement
 
-`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file. **All 3 files must be put inside the same data folder.** Each data folder represent one particular study.
+* `VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file. **All 3 files must be put inside the same data folder.** Each data folder represent one particular study.
+    - The **`ExpressionSet`** object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
+    - The **`Cello`** object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
+    - Lastly, a simple configuration file needs to be editted by user to let VisCello know general information about this study.
 
-The **`ExpressionSet`** object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
-
-The **`Cello`** object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
-
-Lastly, a simple configuration file needs to be editted by user to let VisCello know general information about this study.
-
-Here's an example study folder with data from Cao et al. (2017). You can use `cello("path_to_downloaded_data_folder")` to visualize this dataset with VisCello.
-
-This vignette will describe the preprocessing step for inputing data into VisCello.
+* An example can be downloaded from https://github.com/qinzhu/Celegans.L2.Cello.git. This vignette will describe the preprocessing step for inputing data into VisCello.
 
 ## Prepare ExpressionSet object
 
