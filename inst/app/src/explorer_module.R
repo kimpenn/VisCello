@@ -177,7 +177,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                         ),
                         fluidRow(
                             column(6, selectInput(ns("color_pal"), "Palette", choices=factor_color_opt())),
-                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected = "none"))
+                            column(6, selectInput(ns("legend_type"), "Legend", choices=c("Color Legend" = "l", "Onplot Label" = "ol", "Onplot Text" = "ot", "Legend + Label" = "lol", "Legend + Text" = "lot", "None" = "none"), selected = "ot"))
                         ),
                         fluidRow(
                             column(6, numericInput(ns("show_ploth"), "Height (resize window for width)", min=1, value = 7, step=1)),

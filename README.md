@@ -6,9 +6,10 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 ## Playground
 
 Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
+
 Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/
 
-Install VisCello with code below:
+You can install VisCello with code below:
 
 ``` r
 install.packages("devtools") 
@@ -21,13 +22,15 @@ To put in your own dataset into VisCello for visualization, follow guidance belo
 
 ## General data requirement
 
-`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file.
+`VisCello` requires two main data object - an **`ExpressionSet`** object and a **`Cello`** object (or list of Cello objects), plus one configuration file. **All 3 files must be put inside the same data folder.** Each data folder represent one study.
 
 The **`ExpressionSet`** object is a general class from Bioconductor. See <https://bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf> for details. The expression matrix holds 3 key datasets: the expression matrix and the normalized count matrix, the meta data for the samples (cells), and the meta data for the genes.
 
 The **`Cello`** object is an S4 class specifically designed for visualizing subsets of the single cell data - by storing dimension reduction results of (subsets of) cells that are present in the global ExpressionSet, and any local meta information about the cells, such as clustering results.
 
-Lastly, a simple configuration file needs to be editted by user to let VisCello know where's `ExpressionSet` and `Cello` list of your data, and what's the name of study, etc.
+Lastly, a simple configuration file needs to be editted by user to let VisCello know general information about this study.
+
+Here's an example study folder with data from Cao et al. (2017). You can use `cello("path_to_downloaded_data_folder")` to visualize this dataset with VisCello.
 
 This vignette will describe the preprocessing step for inputing data into VisCello.
 
@@ -152,7 +155,7 @@ Create a list to store `Cello` objects and save to data location.
 
 ``` r
 clist <- list()
-clist[["All Data"]] <- cello
+clist[["Global dataset"]] <- cello
 saveRDS(clist, "inst/app/data/clist.rds") 
 ```
 
@@ -183,8 +186,6 @@ Download example configure file from: https://github.com/qinzhu/VisCello/blob/ma
 
 -   `study_name`: Appear as title for the app.
 -   `study_description` : Appear as footer for the app.
--   `eset_path` : Where you save eset.rds
--   `clist_path` : Where you save clist.rds
 -   `organism` : support mouse, human and c. elegans.
 -   `feature_name_column` : important! What's the column name of fData(eset) that corresponds to gene symbol.
 -   `feature_id_column` : Optional, What's the column name of fData(eset) that corresponds to gene id, set same as `feature_name_column` if you don't have gene id.
@@ -193,7 +194,7 @@ Now VisCello is ready to go! To launch Viscello, in R:
 
 ``` r
 library(VisCello)
-cello(config_file = "~/path_to_config.yml")
+cello(data_path = "path_to_data_folder")
 ```
 
 
@@ -227,3 +228,6 @@ Reference
 ---------
 
 Paul, Franziska, Ya’ara Arkin, Amir Giladi, Diego Adhemar Jaitin, Ephraim Kenigsberg, Hadas Keren-Shaul, Deborah Winter, et al. 2015. “Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors.” *Cell* 163 (7). Elsevier: 1663–77.
+
+Cao, Junyue, et al. Comprehensive single-cell transcriptional profiling of a multicellular organism. Science 357.6352 (2017): 661-667.
+
