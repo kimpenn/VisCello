@@ -32,7 +32,8 @@ Depends:
     clusterProfiler,
     ggraph,
     tidygraph,
-    config
+    config,
+    data.table
 Imports:
     limma,
     irlba,
