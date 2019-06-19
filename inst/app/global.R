@@ -69,10 +69,7 @@ names(numeric_palettes) <- numeric_palettes
 heatmap_palettes <- numeric_palettes[numeric_palettes %in% c("RdYlBu", "RdBu", "viridis", "magma", "plasma", "inferno")]
 
 gene_symbol_choices <- rownames(fData(eset))
-names(gene_symbol_choices) <- fData(eset)$symbol
-
-gene_id_symbol <- names(gene_symbol_choices)
-names(gene_id_symbol) <- gene_symbol_choices
+names(gene_symbol_choices) <- fData(eset)[[name_col]]
 
 feature_options <- data.table(features = names(gene_symbol_choices))
 max_pc_show <- 10

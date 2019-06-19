@@ -60,7 +60,7 @@ norm_df <- read.table("data-raw/GSE72857_log2norm.txt")
 pmeta <- read.table("data-raw/GSE72857_pmeta.txt")
 fmeta <- read.table("data-raw/GSE72857_fmeta.txt")
 
-# Feature meta MUST have rownames the same as the rownames of expression matrix - this can be gene name or gene id (but must not have duplicates). 
+# Feature meta MUST have rownames the same as the rownames of expression matrix - this can be gene name or gene id (but must not have duplicates).
 rownames(fmeta) <- fmeta$id
 
 eset <- new("ExpressionSet",
@@ -135,16 +135,15 @@ Create `Cello` for VisCello, note at least one dimension reduction result must b
 
 ``` r
 library(irlba)
-source("data-raw/preprocess_scripts/cello.R")
-source("data-raw/preprocess_scripts/cello_dimR.R")
+library(VisCello)
 # Creating a cello for all the cells
-cello <- new("Cello", name = "All Data", idx = 1:ncol(eset)) # Index is basically the column index, here all cells are included 
+cello <- new("Cello", name = "Global dataset", idx = 1:ncol(eset)) # Index is basically the column index, here all cells are included 
 # Code for computing dimension reduction, not all of them is necessary, and you can input your own dimension reduction result into the cello@proj list.
 # It is also recommended that you first filter your matrix to remove low expression genes and cells, and input a matrix with variably expressed genes
 cello <- compute_pca_cello(eset, cello, num_dim = 50) # Compute PCA 
 cello <- compute_tsne_cello(eset, cello, use_dim = 30, n_component = 2, perplexity = 30) # Compute t-SNE
-cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 2, umap_path = "data-raw/preprocess_scripts/python/umap.py") # Compute UMAP, need reticulate and UMAP (python package) to be installed
-cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 3, umap_path = "data-raw/preprocess_scripts/python/umap.py") # 3D UMAP
+cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 2) # Compute UMAP, need reticulate and UMAP (python package) to be installed
+cello <- compute_umap_cello(eset, cello, use_dim = 30, n_component = 3) # 3D UMAP
 ```
 
 If you already computed your dimension reduction result and wants to make a cello for it, use following R code:
@@ -175,8 +174,8 @@ cello <- new("Cello", name = zoom_type, idx = cur_idx)
 # Refilter gene by variation if necessary
 cello <- compute_pca_cello(eset[,cur_idx], cello, num_dim = 50) # Compute PCA 
 cello <- compute_tsne_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 2, perplexity = 30) # Compute t-SNE
-cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 2, umap_path = "data-raw/preprocess_scripts/python/umap.py") # Compute UMAP
-cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 3, umap_path = "data-raw/preprocess_scripts/python/umap.py") # 3D UMAP
+cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 2) # Compute UMAP
+cello <- compute_umap_cello(eset[,cur_idx], cello, use_dim = 15, n_component = 3) # 3D UMAP
 clist[[zoom_type]] <- cello
 saveRDS(clist, "your_data_folder/clist.rds") 
 ```
@@ -191,8 +190,8 @@ Download example configure file from: https://github.com/qinzhu/Celegans.L2.Cell
 -   `study_name`: Appear as title for the app.
 -   `study_description` : Appear as footer for the app.
 -   `organism` : support mouse, human and c. elegans.
--   `feature_name_column` : important! What's the column name of fData(eset) that corresponds to gene symbol.
--   `feature_id_column` : Optional, What's the column name of fData(eset) that corresponds to gene id, set same as `feature_name_column` if you don't have gene id.
+-   `feature_name_column` : important! What's the column name of fData(eset) that corresponds to gene symbol, must be specified.
+-   `feature_id_column` : What's the column name of fData(eset) that corresponds to gene id, set same as `feature_name_column` if you don't have gene id.
 
 After updating this file, put it together with previously saved eset.rds and clist.rds
 

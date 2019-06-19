@@ -37,6 +37,7 @@ Depends:
 Imports:
     limma,
     irlba,
+    uwot,
     org.Mm.eg.db, 
     org.Hs.eg.db,
     celegans.db
