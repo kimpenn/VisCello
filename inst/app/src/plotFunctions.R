@@ -62,7 +62,7 @@ get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
 
 #' @export
 numeric_color_opt <- function() {
-    allowed_pals <- c('RdYlBu', 'RdBu','RdOgYl', 'rainbow2', 'viridis', 'magma', 'plasma', 'inferno', 'rainbow', 'gg_color_hue', 'grey&red')
+    allowed_pals <- c("BlueGreenRed", 'RdYlBu', 'RdBu','RdOgYl', 'rainbow2', 'viridis', 'magma', 'plasma', 'inferno', 'rainbow', 'gg_color_hue', 'grey&red')
     return(allowed_pals)
 }
 
@@ -84,7 +84,7 @@ get_numeric_color <- function(palette = NULL) {
     } else if(palette == "rainbow2") {
         c("#CCCCCCCC",rainbow(500)[50:500])
     } else if(palette == "grey&red") {
-        c("grey", "red")
+        c("grey", "#b2182b")
     } else if(palette == "RdOgYl") {
         c("grey85", "red", "orange", "yellow")
     } else if(palette == "gg_color_hue") {
@@ -101,6 +101,8 @@ get_numeric_color <- function(palette = NULL) {
         c("grey85",  "black", "yellow")
     } else if(palette == "black_yellow_gold") {
         c("grey85",  "black", "yellow", "gold")
+    } else if(palette == "BlueGreenRed") {
+        colorRampPalette(c("midnightblue", "dodgerblue", "seagreen", "#00C000", "gold2", "darkorange1", "red1"))(10)
     }
 }
 
@@ -344,33 +346,38 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         proj[[group.by]][proj[[group.by]] < limits[1]] <- limits[1]
         proj[[group.by]][proj[[group.by]] > limits[2]] <- limits[2]
     }
-    pp<-ggplot(proj, aes_string(plot_col[1],plot_col[2])) +
-        geom_point(aes_string(color=group.by, alpha="alpha"), size=size, stroke = 0) +
+    is_layer2 <- proj[[group.by]] == "unannotated" | is.na(proj[[group.by]]) | proj[[group.by]] == 0
+    idx_region <- which(!is_layer2)
+    pp<-ggplot(proj, aes_string(color=group.by)) +
+        geom_point(aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size,color=na.col,show.legend=FALSE, stroke=0) +
+        geom_point(data=proj[idx_region,],aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size, stroke = 0) +
         scale_alpha_manual(values=alpha_manual) +
         theme_bw() +
         ggtitle(plot_title) +
         theme(plot.title = element_text(hjust = 0.5), legend.position = legend.position)
     if(!is.null(onplotAnnot)) {
+        label_data <- proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+        if(length(breaks) > 0) {
+            label_data <- label_data[label_data[[group.by]] %in% breaks,,drop=F]
+        }
         if(onplotAnnot == "text") {
             pp<- pp + geom_text(
                 aes_string(
-                    label = group.by,
-                    color = group.by
+                    x = plot_col[1], y= plot_col[2], 
+                    label = group.by
                 ),
                 size = onplotAnnotSize,
                 nudge_x = nudge_x,
                 nudge_y = nudge_y,
-                data = proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
+                data = label_data
             )
         } else {
-            label_data <- proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
-            if(length(breaks) > 0) {
-                label_data <- label_data[label_data[[group.by]] %in% breaks,,drop=F]
-            }
             pp<- pp + geom_label(
                 aes_string(
+                    x=plot_col[1],y=plot_col[2], 
                     label = group.by
                 ),
+                color = "black",
                 size = onplotAnnotSize,
                 nudge_x = nudge_x,
                 nudge_y = nudge_y,
@@ -404,6 +411,7 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
     }
     return(pp)
 }
+
 
 
 #' @export
