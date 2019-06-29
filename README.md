@@ -7,7 +7,7 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 * Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
 
-* Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/
+* Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/. Also available as R package for download at https://github.com/qinzhu/VisCello.celegans.
 
 * You can install VisCello with code below:
 
