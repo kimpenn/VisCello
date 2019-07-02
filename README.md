@@ -3,11 +3,11 @@ Using VisCello for Single Cell Data Visualization
 Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 
-## Playground
+## Screenshot
 
-* Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
+![](inst/app/www/screenshot.png?raw=true "VisCello screenshot")
 
-* Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/. Also available as R package for download at https://github.com/qinzhu/VisCello.celegans.
+## Install
 
 * You can install VisCello with code below:
 
@@ -17,6 +17,12 @@ devtools::install_github("qinzhu/VisCello") # install
 library(VisCello) # load
 cello() # launch with example data
 ```
+
+## Example datasets preprocessed for VisCello
+
+* Here's an example app with data from Paul et al. (2015): https://cello.shinyapps.io/base/. It shows basic features offered by VisCello.
+
+* Here's another app based on VisCello for interactive exploration of C. elegans embryogenesis data: https://cello.shinyapps.io/celegans/. Also available as R package for download at https://github.com/qinzhu/VisCello.celegans.
 
 * You can download an example dataset for VisCello from https://github.com/qinzhu/Celegans.L2.Cello
 
