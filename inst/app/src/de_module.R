@@ -700,9 +700,11 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         withProgress(message = 'Enrichment test in progress...', {
             incProgress(1/2)
             # only compute enrichment for significant deg
-            de_list <- lapply(de_res$de_list, function(x) {
-                x %>% dplyr::filter(significant == TRUE)
-            })
+            if("significant" %in% colnames(de_res$de_list[[1]])) {
+                de_list <- lapply(de_res$de_list, function(x) {
+                    x %>% dplyr::filter(significant == TRUE)
+                })
+            }
             enrich_list <- compute_go(de_list, bg_list = de_res$feature_data[[name_col]], type = input$go_type, organism = organism, idcol = "gene_name")
             de_res$enrich_list <- enrich_list
             de_res$enrich_type <- input$go_type
