@@ -86,7 +86,7 @@ function(input, output, session) {
 
     # Load data
     observeEvent(input$exit_app, {
-        stopApp("C.elegans explorer closed.")
+        stopApp("VisCello closed.")
     })
 
 
