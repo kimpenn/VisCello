@@ -704,6 +704,8 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 de_list <- lapply(de_res$de_list, function(x) {
                     x %>% dplyr::filter(significant == TRUE)
                 })
+            } else {
+                de_list <- de_res$de_list
             }
             enrich_list <- compute_go(de_list, bg_list = de_res$feature_data[[name_col]], type = input$go_type, organism = organism, idcol = "gene_name")
             de_res$enrich_list <- enrich_list
