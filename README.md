@@ -5,7 +5,7 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 ## Screenshot
 
-![](inst/app/www/screenshot.png?raw=true "VisCello screenshot")
+[![Alt text](inst/app/www/screenshot.png?raw=true "VisCello screenshot")](https://cello.shinyapps.io/celegans/)
 
 ## Install
 
