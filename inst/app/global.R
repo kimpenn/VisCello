@@ -1,6 +1,6 @@
 
 # For deploy, set F to T, replace inst/app/data/config.yml, clist.rds and eset.rds. Follow https://github.com/qinzhu/VisCello to deploy.
-viscello_DEPLOY = T
+viscello_DEPLOY = F
 
 lapply(list.files("src/", pattern = "\\.(r|R)$", recursive = F, full.names = TRUE), function(x){source(file = x)})
 
