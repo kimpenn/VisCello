@@ -334,7 +334,7 @@ gg.overlay <- function(df) {  # produces 2 color channels and the overlay
 
 
 #' @export
-plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), ...) {
+plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), cover0 = T, ...) {
     plot_col <- colnames(proj)[dim_col]
     if(!is.null(alpha)) {
         proj$alpha <- alpha
@@ -346,15 +346,21 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         proj[[group.by]][proj[[group.by]] < limits[1]] <- limits[1]
         proj[[group.by]][proj[[group.by]] > limits[2]] <- limits[2]
     }
-    is_layer2 <- proj[[group.by]] == "unannotated" | is.na(proj[[group.by]]) | proj[[group.by]] == 0
-    idx_region <- which(!is_layer2)
     pp<-ggplot(proj, aes_string(color=group.by)) +
-        geom_point(aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size,color=na.col,show.legend=FALSE, stroke=0) +
-        geom_point(data=proj[idx_region,],aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size, stroke = 0) +
         scale_alpha_manual(values=alpha_manual) +
         theme_bw() +
         ggtitle(plot_title) +
         theme(plot.title = element_text(hjust = 0.5), legend.position = legend.position)
+    
+    if(cover0) {
+        is_layer2 <- proj[[group.by]] == "unannotated" | is.na(proj[[group.by]])
+        idx_region <- which(!is_layer2)
+        pp<- pp + geom_point(aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size,color=na.col,show.legend=FALSE, stroke=0) +
+            geom_point(data=proj[idx_region,],aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size, stroke = 0)
+    } else {
+        pp<- pp + geom_point(aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size, stroke = 0)
+    }
+
     if(!is.null(onplotAnnot)) {
         label_data <- proj %>% group_by_at(group.by) %>% summarize_at(plot_col, median)
         if(length(breaks) > 0) {
