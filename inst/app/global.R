@@ -34,7 +34,7 @@ names(meta_order) <- meta_order
 # Don't show factors that's not useful to the user
 meta_order <- meta_order[!meta_order %in% c("barcode")]
 # Do not edit below
-meta_order["Gene Expression"] = "gene.expr"
+meta_order["Peak Accessibility"] = "gene.expr"
 pmeta_attr <- data.frame(meta_id = meta_order, meta_name = names(meta_order), stringsAsFactors=FALSE)
 pData(eset) <- pData(eset)[,which(colnames(pData(eset)) %in% pmeta_attr$meta_id), drop=F]
 

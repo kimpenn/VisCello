@@ -36,7 +36,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                         )
                        ),
                        uiOutput(ns("proj_colorBy_ui")),
-                       selectizeInput(ns("gene_list"), "Search Gene:", choices = NULL, multiple = T),
+                       selectizeInput(ns("gene_list"), "Search feature:", choices = NULL, multiple = T),
                        uiOutput(ns("plot_scalecolor_ui")),
                        uiOutput(ns("data_highlight"))
                    ),
@@ -78,7 +78,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             wellPanel(
                 fluidRow(
                     column(3, uiOutput(ns("bp_sample_ui"))),
-                    column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = NULL, selected = NULL)),
+                    column(3, selectizeInput(ns("bp_gene"), "Search feature:", choices = NULL, selected = NULL)),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
                     column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
                 ),
@@ -119,7 +119,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             ),
             tabPanel(
                 value = "fui",
-                tags$b("Expression by Group"),
+                tags$b("Accessibility by Group"),
                 fui
             )
         )
@@ -216,7 +216,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         })
     })
     
-    updateSelectizeInput(session, "gene_list", "Search Gene:", choices = feature_options$features, selected = NULL, server=T)
+    updateSelectizeInput(session, "gene_list", "Search feature:", choices = feature_options$features, selected = NULL, server=T)
 
     output$plot_ui <- renderUI({
         ns <- session$ns
@@ -563,8 +563,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                                           alpha_manual = c("f"=1,"t"=pvals$alpha_level),
                                           na.col = "lightgrey",
                                           legend_name = ifelse(pvals$log_transform_gene == "log2", 
-                                                               paste0(colnames(pvals$gene_values), " expression\n(log normalized)"), 
-                                                               paste0(colnames(pvals$gene_values), " expression\n(raw count)")))
+                                                               paste0(colnames(pvals$gene_values), " accessibility\n(log normalized)"), 
+                                                               paste0(colnames(pvals$gene_values), " accessibility\n(raw count)")))
         }
     })
 
@@ -749,7 +749,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                     "Zoom in to selected cells" = "zoom", 
                     "Name selected cell subset" = "addmeta",
                     #"Compute new PCA/UMAP with selected cells" = "compdimr",
-                    "Download expression data (ExpressionSet format) of selected cells" = "downcell",
+                    "Download data (ExpressionSet format) of selected cells" = "downcell",
                     "Download meta data of selected cells" = "downmeta"
                 )))
             ),
@@ -956,14 +956,14 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                             plotOutput(ns("gene_histogram_plot")),
                             fluidRow(
                                 column(6, numericInput(ns("g_limit"), 
-                                                       label = "Expression Cutoff", 
+                                                       label = "Cutoff", 
                                                        value = glim, min = 0)),
                                 column(6, tags$p("Red line indicate max value for color scale. Default cutoff is set at 97.5th percentile."))
                             ),
                             conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_ds"), label = NULL, value = input$log_transform_gene)),
                             conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_sample"), label = NULL, value = input$input_sample)),
                             conditionalPanel("1==0", ns = ns, textInput(ns("g_limit_gene"), label = NULL, value = input$gene_list)),
-                            circle = T, label ="Expression histogram and color scale cutoff", tooltip=T, right = T,
+                            circle = T, label ="Histogram and color scale cutoff", tooltip=T, right = T,
                             icon = icon("chart-bar"), size = "xs", status="info", class = "btn_rightAlign")
         } else {
             return()
@@ -977,7 +977,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
     output$gene_histogram_plot <- renderPlot({
         req(ev$gene_values)
         gname <- colnames(ev$gene_values)
-        hist(ev$gene_values[,1], xlab=paste0(input$log_transform_gene, "expression"), main = paste0("Expression histogram of gene ", gname))
+        hist(ev$gene_values[,1], xlab=paste0(input$log_transform_gene, "accessibility"), main = paste0("Accessibility histogram of gene ", gname))
         abline(v = input$g_limit, col=c("red"), lty=c(2), lwd=c(3))
     })
 
@@ -1148,7 +1148,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         plotOutput(ns("bp_gene_plot"), height = paste0(500/5.5 *input$bp_show_ploth,"px")) %>% withSpinner()
     })
     
-    updateSelectizeInput(session, "bp_gene", "Search Gene:", choices = feature_options$features, server=T)
+    updateSelectizeInput(session, "bp_gene", "Search feature:", choices = feature_options$features, server=T)
     
     output$bp_sample_ui <- renderUI({
         ns <- session$ns
@@ -1290,7 +1290,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                      text.size = input$bp_text_size, pointSize = input$bp_marker_size, legend = ifelse(input$bp_legend_type == "l", T, F), 
                      breaks = unique(cur_group), axis.text.angle = input$bp_xaxis_angle, 
                      order.by = ifelse(grepl("time",input$bp_colorBy, ignore.case = T), "none", "mean"), 
-                     ylab.label = ifelse(input$bp_log_transform_gene == "log2", "Expression (log2 normalized)", "Expression (raw count)")
+                     ylab.label = ifelse(input$bp_log_transform_gene == "log2", "Accessibility (log2 normalized)", "Accessibility (raw count)")
         )
     })
     

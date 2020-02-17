@@ -4,7 +4,7 @@
 \alias{cello}
 \title{Launch App}
 \usage{
-cello(data_path = paste0(system.file("app", package = "VisCello"),
+cello(data_path = paste0(system.file("app", package = "VisCello.atac"),
   "/data"), RStudio = F)
 }
 \description{

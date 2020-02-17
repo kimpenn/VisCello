@@ -64,7 +64,7 @@ function() {
         )
     ),
     tabPanel(
-        "Differential Expression",
+        "Differential Accessibility",
         de_ui("eht")
     ),
     header = tagList(
