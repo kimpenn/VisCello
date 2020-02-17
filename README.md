@@ -13,7 +13,7 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 ``` r
 install.packages("devtools") 
-devtools::install_github("qinzhu/VisCello") # install
+devtools::install_github("qinzhu/VisCello", ref="VisCello-atac") # install
 library(VisCello) # load
 cello() # launch with example data
 ```
