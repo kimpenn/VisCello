@@ -204,7 +204,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         group <- group[!group == ""]
         if(length(group) == 1) {
             dropdownButton2(inputId=ns("downsample_background"),
-                            selectInput(ns("de_method"), "DE Method", choices=c("Chi-square (binary)" = "chi", "sSeq" = "sseq"), selected = "sseq"),
+                            selectInput(ns("de_method"), "DE Method", choices=c("Chi-square (binary)" = "chi", "Mann–Whitney U test" = "mw", "sSeq" = "sseq"), selected = "sseq"),
                             numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
                             numericInput(ns("de_lfc_cutoff"), "LFC cutoff", value = 1),
                             numericInput(ns("downsample_gp_num"), "Max Cell # in subset", value = 200),
@@ -214,7 +214,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                             icon = icon("angle-double-down"), size = "sm", status="success", class = "btn_rightAlign")
         } else {
             dropdownButton2(inputId=ns("downsample_group"),
-                            selectInput(ns("de_method"), "DE Method", choices=c("Chi-square (binary)" = "chi", "sSeq" = "sseq"), selected = "sseq"),
+                            selectInput(ns("de_method"), "DE Method", choices=c("sSeq" = "sseq", "Mann–Whitney U test" = "mw", "Chi-square (binary)" = "chi"), selected = "sseq"),
                             numericInput(ns("de_pval_cutoff"), "FDR cutoff", value = 0.05),
                             numericInput(ns("de_lfc_cutoff"), "LFC cutoff", value = 1),
                             numericInput(ns("downsample_num"), "Max Cell # per Group", value = 200),
@@ -443,23 +443,41 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             }))
             test_idx <- unlist(test_idx)
             cur_cds <- eset[, test_idx]
-            gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0
+            
+            assign("cur_cds", cur_cds, env =.GlobalEnv)
+            assign("test_clus", test_clus, env =.GlobalEnv)
+            feature_var <- apply(as.matrix(exprs(cur_cds)), 1,var)
+            if(NEG_VAL == T) {
+                gene_idx <- complete.cases(as.matrix(exprs(cur_cds))) & feature_var !=0
+            } else{
+                gene_idx <- Matrix::rowSums(exprs(cur_cds)) > 0 & complete.cases(as.matrix(exprs(cur_cds))) & feature_var !=0
+            }
+
             cur_cds <- cur_cds[gene_idx,]
             feature_data <- fData(cur_cds)
+
             if(input$de_method == "sseq") {
                 test_method = "sseq"
-                prioritized_genes <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = 0, id_col = id_col, name_col = name_col)
-                de_list <- lapply(prioritized_genes, function(x) {
-                    x %>% dplyr::filter(significant == TRUE) %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
+                de_list <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = input$de_lfc_cutoff, id_col = id_col, name_col = name_col)
+                de_list <- lapply(de_list, function(x) {
+                    x %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
+                    colnames(x)[c(1,2)] <- c(id_col, name_col)
+                    return(x)
                 })
             } else if(input$de_method == "chi") {
+                if(length(unique(test_clus)) > 2) {
+                    session$sendCustomMessage(type = "showalert", "Only support pairwise chi-square test.")
+                    return()
+                }
                 test_method = "chi-square"
-                prioritized_genes <- run_chisq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, fdr= input$de_pval_cutoff, detRate=.05, id_col = id_col, name_col = name_col)
-                prioritized_genes <- lapply(prioritized_genes, function(x) {
-                    x$LFC_abs <- abs(log2(x$proportion1/x$proportion2))
-                    x %>% dplyr::filter(LFC_abs >= input$de_lfc_cutoff)
-                })
-                de_list <- prioritized_genes
+                de_list <- run_chisq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, min_fdr= input$de_pval_cutoff, min_lfc = input$de_lfc_cutoff, detRate=.05, id_col = id_col, name_col = name_col)
+            } else if(input$de_method == "mw") {
+                if(length(unique(test_clus)) > 2) {
+                    session$sendCustomMessage(type = "showalert", "Only support pairwise Mann–Whitney U test.")
+                    return()
+                }
+                test_method = "mw"
+                de_list <- run_mw(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, min_fdr= input$de_pval_cutoff, id_col = id_col, name_col = name_col,  detRate = .05)
             }
         })
 
@@ -470,34 +488,28 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         de_res$test_group <- test_group
         de_res$test_clus <- test_clus
         de_res$test_method <- test_method
-        de_res$deg <- prioritized_genes
         de_res$de_list <- de_list
         de_res$feature_data <- feature_data
         de_res$feature_idx <- gene_idx
     })
     
-    observeEvent(input$de_filter, {
-            de_res$de_list <- lapply(de_res$deg, function(x) {
-                if(de_res$test_method == "sseq") {
-                    tbl <- x %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj, significant)
-                } else {
-                    tbl <- x
+    de_show <- reactive({
+        input$de_filter
+        lapply(de_res$de_list, function(x) {
+            if(de_res$test_method == "sseq") {
+                tbl <- x[,c(id_col, name_col, "common_mean", "dispersion", "log2fc", "p", "p_adj", "significant")]
+            } else {
+                tbl <- x
+            }
+            if(input$de_filter == "significant") {
+                tbl <- tbl %>% dplyr::filter(significant == TRUE)
+            } else { # Add human symbol for GSEA
+                if(organism == "mmu") {
+                    tbl$human_symbol <- mouse_to_human_symbol(tbl[[name_col]], in.type = "mm", HMD_HumanPhenotype)
                 }
-                if(input$de_filter == "significant") {
-                    tbl <- tbl %>% dplyr::filter(significant == TRUE)
-                } else { # Add human symbol for GSEA
-                    if(organism == "mmu") {
-                        tbl$human_symbol <- mouse_to_human_symbol(tbl$gene_name, in.type = "mm", HMD_HumanPhenotype)
-                    }
-                }
-
-                # if(input$de_filter == "enh") {
-                #     tbl <- tbl[grepl("ENSMUSR", tbl[[name_col]]), ]
-                # } else if(input$de_filter == "tss") {
-                #     tbl <- tbl[!grepl("ENSMUSR", tbl[[name_col]]) & !grepl("^chr", tbl[[name_col]]) & !is.na(tbl[[name_col]]), ]
-                # } 
-                return(tbl)
-            })
+            }
+            return(tbl)
+        })
     })
     
     
@@ -528,26 +540,23 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     observe({
         req(de_res$de_list, input$hmap_dscale)
         assign("de_res", reactiveValuesToList(de_res), env = .GlobalEnv)
-        if(sum(sapply(de_res$de_list, nrow)) == 0) return()
+        #assign("des", reactiveValuesToList(des), env=.GlobalEnv)
+        if(sum(sapply(de_show(), nrow)) == 0) return()
         cur_list <- sclist$clist
         #isolate({
         # Color bar on top of heatmap
         #assign("de_res", reactiveValuesToList(de_res), env =.GlobalEnv)
         de_res$cells_to_plot <- order_cell_by_clusters2(cmeta$df[de_res$test_idx,], de_res$test_clus)
-        if(input$de_hmap_colorBy == "Group") {
-            de_res$plot_group = NULL
-            de_res$group_colour=NULL
-        } else {
-            sample <- de_res$sample
-            idx <- cur_list[[sample]]@idx
-            cur_factor <- des$meta[[input$de_hmap_colorBy]]
-            unique_factors <- unique(cur_factor)
-            de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
-            factor_color <- get_factor_color(unique_factors, pal=input$de_plot_color_pal, maxCol = 9)
-            names(factor_color) <- unique_factors
-            factor_color[["unannotated"]] <- "lightgrey"
-            de_res$group_colour = factor_color
-        }
+        sample <- de_res$sample
+        idx <- cur_list[[sample]]@idx
+        cur_factor <- des$meta[[input$de_hmap_colorBy]]
+        unique_factors <- unique(cur_factor)
+        de_res$plot_group = cur_factor[match(de_res$test_idx, idx)]
+        #print(de_res$plot_group)
+        factor_color <- get_factor_color(unique_factors, pal=input$de_plot_color_pal, maxCol = 9)
+        names(factor_color) <- unique_factors
+        factor_color[["unannotated"]] <- "lightgrey"
+        de_res$group_colour = factor_color
         # Color of heatmap
         if(!is.null(input$hmap_color_pal)) {
             de_res$heatmap_color = get_numeric_color(input$hmap_color_pal)
@@ -565,17 +574,18 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         req(de_res$de_list)
         # shut_device <- dev.list()[which(names(dev.list()) != "quartz_off_screen")]
         # if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
-
+        #if(is.null(de_show())) return()
         withProgress(message="Rendering heatmap..", {
             if(input$de_hmap_scale == "log2") {
                 dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
+                if(NEG_VAL) dat <- t(apply(dat, 1, function(x) {x[is.infinite(x) & x < 0 ] <- min(x[!is.infinite(x)]); x[is.infinite(x) & x > 0 ] <- max(x[!is.infinite(x)]); return(x)}))
             } else {
                 dat <- exprs(eset)[de_res$feature_idx, de_res$test_idx]
             }
             rownames(dat) <- make.unique(as.character(fData(eset)[[name_col]][match(rownames(dat), rownames(fData(eset)))])) # Deal with non-unique features later!!
-            isolate({
+            #isolate({
                 de_res$hmap<-gbm_pheatmap2(dat,
-                                           genes_to_plot = as.character(unlist(lapply(de_res$de_list, function(x) {x[["gene_name"]][1:min(input$hmap_numg, nrow(x))]}))),
+                                           genes_to_plot = as.character(unlist(lapply(de_show(), function(x) {x[[name_col]][1:min(input$hmap_numg, nrow(x))]}))),
                                            cells_to_plot=de_res$cells_to_plot,
                                            group=de_res$plot_group,
                                            group_colour=de_res$group_colour,
@@ -584,13 +594,13 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                                            heatmap_color = de_res$heatmap_color,
                                            n_genes=input$hmap_numg, fontsize=8, limits=c(input$hmap_limitlow, input$hmap_limithigh))
                 grid::grid.draw(de_res$hmap$gtable)
-            })
+            #})
         })
     })
     
     output$deg_summary <- DT::renderDataTable({
         req(de_res$de_list)
-        tbl<- data.frame(clusters = names(de_res$de_list), number_de_genes = sapply(de_res$de_list, nrow))
+        tbl<- data.frame(clusters = names(de_res$de_list), number_de_genes = sapply(de_show(), function(x)sum(x$significant)))
         DT::datatable(tbl, rownames=F, options = list(searching=F, paging=F))
     })
     
@@ -602,12 +612,12 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             args= purrr::map(de_res$test_group,.f = function(nm){
                 shiny::tabPanel(title=nm,
                                 DT::renderDataTable({
-                                    req(de_res$de_list)
+                                    req(de_show())
                                     if(de_res$test_method == "sseq") {
-                                        DT::datatable(de_res$de_list[[nm]], selection = 'single') %>%
+                                        DT::datatable(de_show()[[nm]], selection = 'single') %>%
                                             DT::formatRound(columns=c('common_mean', 'dispersion', 'log2fc', 'p', 'p_adj'), digits=3)
                                     } else {
-                                        DT::datatable(de_res$de_list[[nm]], selection = 'single') 
+                                        DT::datatable(de_show()[[nm]], selection = 'single') 
                                     }
                                 })
                 )
@@ -617,7 +627,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     
     output$download_hmap_ui <- renderUI({
         ns <- session$ns
-        req(de_res$de_list)
+        req(de_show())
         downloadButton(ns("download_hmap"), "Download Heatmap", class = "btn_rightAlign")
     })
     
@@ -635,7 +645,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     
     output$download_de_res_ui <- renderUI({
         ns <- session$ns
-        req(de_res$deg)
+        req(de_show())
         fluidRow(
             column(6),
             column(3, selectInput(ns("de_filter"), NULL, choices = c("Show only significant"="significant" ,
@@ -650,8 +660,8 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             paste(input$de_sample, "_", paste0(de_idx$group_name, collapse="_vs_"), "_", Sys.Date(), '_de', "_", input$de_filter, '.xlsx', sep='')
         },
         content = function(con) {
-            req(de_res$de_list)
-            write.xlsx(de_res$de_list, file=con)
+            req(de_show())
+            write.xlsx(de_show(), file=con)
         }
     )
     
@@ -707,7 +717,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
             } else {
                 de_list <- de_res$de_list
             }
-            enrich_list <- compute_go(de_list, bg_list = de_res$feature_data[[name_col]], type = input$go_type, organism = organism, idcol = "gene_name")
+            enrich_list <- compute_go(de_list, bg_list = de_res$feature_data[[name_col]], type = input$go_type, organism = organism, idcol = name_col)
             de_res$enrich_list <- enrich_list
             de_res$enrich_type <- input$go_type
         })

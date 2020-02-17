@@ -27,7 +27,7 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
         gene.df <- bitr(de_list[[i]][[idcol]], fromType = fromType,
                         toType = c("SYMBOL", "ENTREZID"),
                         OrgDb = orgdb)
-        base::merge(x = tbl, gene.df, by.x = "gene_name", by.y = "SYMBOL")
+        base::merge(x = tbl, gene.df, by.x = idcol, by.y = "SYMBOL")
     })
 
     names(gene_list) <- names(de_list)
