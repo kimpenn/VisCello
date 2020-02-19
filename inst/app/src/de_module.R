@@ -519,7 +519,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         dropdownButton2(inputId=ns("hmap_configure"),
                         fluidRow(
                             column(6, selectInput(ns("de_hmap_colorBy"), "Heatmap Color By", choices = des$meta_options)),
-                            column(6, selectInput(ns("de_hmap_scale"), "Data scale", choices = c("Log2 normalized count"="log2", "Raw count" = "raw")))
+                            column(6, selectInput(ns("de_hmap_scale"), "Data scale", choices = c("Normalized count"="log2", "Raw count" = "raw")))
                         ),
                         fluidRow(
                             column(6, selectInput(ns("hmap_color_pal"), "Heatmap Color", choices=heatmap_palettes)),
