@@ -1,6 +1,6 @@
 default:
-    study_name: "Myeloid Single Cell"
-    study_description: "Data from Paul et al., 2015, Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors."
-    organism: "mmu" # choose from mmu (mouse), hsa (human) and cel (C.elegans)
-    feature_name_column: "symbol"
-    feature_id_column: "symbol" # Set this to be same as name col if feature id column not available
+  study_name: pbmc10k 
+  study_description: NNN 
+  organism: hsa 
+  feature_name_column: 'symbol' 
+  feature_id_column: 'symbol' 

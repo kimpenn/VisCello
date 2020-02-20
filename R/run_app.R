@@ -34,7 +34,7 @@ cello <- function(data_path = paste0(system.file("app", package='VisCello.atac')
     }, error = function(x){
         stop("Cannot find eset or clist file in data folder, if data_path is correct.")
     })
-    shiny::runApp(system.file("app", package='VisCello.atac'))
+    shiny::runApp(system.file("app", package='VisCello.atac'), launch.browser = T)
 }
 
 
