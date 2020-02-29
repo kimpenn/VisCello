@@ -80,7 +80,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                     column(3, uiOutput(ns("bp_sample_ui"))),
                     column(3, selectizeInput(ns("bp_gene"), "Search Gene:", choices = NULL, selected = NULL)),
                     column(3, uiOutput(ns("bp_colorBy_ui"))),
-                    column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw")))
+                    column(3, selectInput(ns("bp_log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Molecule (UMI) count" = "raw")))
                 ),
                 uiOutput(ns("bp_include_ui"))
             ),
@@ -153,7 +153,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         req(input$proj_colorBy, !input$proj_colorBy %in% c("moreop", "lessop"))
         
         if(input$proj_colorBy == 'gene.expr') {
-            selectInput(ns("log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Raw count" = "raw"))
+            selectInput(ns("log_transform_gene"), "Data scale", choices=list("Log2 normalized count"="log2", "Molecule (UMI) count" = "raw"))
         } else if(!input$proj_colorBy %in% ev$factor_cols){
             default_scale <- NULL
             if(input$proj_colorBy %in% pmeta_attr$meta_id && !is.null(pmeta_attr$dscale)) {
