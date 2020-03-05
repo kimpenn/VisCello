@@ -5,7 +5,7 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 ## Screenshot
 
-[![Alt text](inst/app/www/screenshot.png?raw=true "VisCello screenshot")](https://cello.shinyapps.io/celegans/)
+[![Alt text](inst/app/www/screenshot_pbmc10k_atac.png?raw=true "VisCello screenshot")](https://cello.shinyapps.io/celegans/)
 
 ## Install
 
@@ -13,8 +13,8 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 
 ``` r
 install.packages("devtools") 
-devtools::install_github("qinzhu/VisCello") # install
-library(VisCello) # load
+devtools::install_github("qinzhu/VisCello", ref = "VisCello-atac") # install
+library(VisCello.atac) # load
 cello() # launch with example data
 ```
 
