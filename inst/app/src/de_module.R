@@ -645,7 +645,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
     
     output$download_de_res_ui <- renderUI({
         ns <- session$ns
-        req(de_show())
+        #req(de_show())
         fluidRow(
             column(6),
             column(3, selectInput(ns("de_filter"), NULL, choices = c("Show only significant"="significant" ,
