@@ -1099,6 +1099,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             #assign("ev1cells", ev$cells, env=.GlobalEnv)
             cur_eset <- eset[,ev$cells]
             expressed_gene <- rowMeans(exprs(cur_eset) > 0) > input$compdimr_expr_cut
+            cur_eset <- cur_eset[expressed_gene,]
             newvis <- new("Cello", name = input$compdimr_name, idx = match(ev$cells, colnames(eset))) 
             newvis <- compute_pca_cello(cur_eset, newvis, num_dim = input$compdimr_numpc) # Compute PCA 
             #newvis <- compute_tsne_newvis(cur_eset, newvis, use_dim = input$compdimr_numpc, n_component = 2, perplexity = 30) # Compute t-SNE
