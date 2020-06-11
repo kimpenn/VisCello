@@ -460,8 +460,13 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 test_method = "sseq"
                 de_list <- runsSeq(dat=as.matrix(exprs(cur_cds)), group=test_clus, fdata = feature_data, order_by="pvalue", p_cutoff= input$de_pval_cutoff, min_mean = 0, min_log2fc = input$de_lfc_cutoff, id_col = id_col, name_col = name_col)
                 de_list <- lapply(de_list, function(x) {
-                    x %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
-                    colnames(x)[c(1,2)] <- c(id_col, name_col)
+                    if(!identical(id_col, name_col)) {
+                        x %>% dplyr::select(gene_id, gene_name, common_mean, dispersion, log2fc, p, p_adj)
+                        colnames(x)[c(1,2)] <- c(id_col, name_col)
+                    } else {
+                        x %>% dplyr::select(gene_id, common_mean, dispersion, log2fc, p, p_adj)
+                        colnames(x)[c(1)] <- c(id_col)
+                    }
                     return(x)
                 })
             } else if(input$de_method == "chi") {
