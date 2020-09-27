@@ -1,5 +1,78 @@
 
+# Function adapted from monocle
+#' @export
+louvain_R <- function(X, python_home = system('which python', intern = TRUE), 
+                      partition_method = 'CPMVertexPartition', 
+                      initial_membership = NULL, 
+                      weights = NULL, 
+                      res = 0.6, 
+                      node_sizes = NULL, 
+                      random_seed = 0L, 
+                      verbose = FALSE,
+                      return_all = FALSE,
+                      louvain_path = NULL) {
+    
+    reticulate::use_python(python_home)
+    
+    tryCatch({
+        reticulate::import("louvain")
+    }, warning = function(w) {
+    }, error = function(e) {
+        print (e)
+        stop('please pass the python home directory where louvain is installed with python_home argument!')
+    }, finally = {
+    })
+    
+    reticulate::source_python(louvain_path)
+    # X <- Matrix::t(X)
+    if(length(grep('Matrix', class(X))) == 0){
+        X <- as(as.matrix(X), 'TsparseMatrix')
+    } else {
+        X <- as(X, 'TsparseMatrix')
+    }
+    
+    i <- as.integer(X@i)
+    j <- as.integer(X@j)
+    val <- X@x
+    
+    dim <- as.integer(X@Dim)
+    
+    if(is.null(partition_method) == F) {
+        partition_method <- as.character(partition_method)
+    }
+    if(!is.null(random_seed)) {
+        random_seed <- as.integer(random_seed)
+    }
+    # if(is.null(initial_membership) == F) { #initial_membership (list of int) 
+    #   a <- as.numeric(a)
+    # }
+    # if(is.null(weights) == F) { # weights (list of double, or edge attribute) 
+    #   n_epochs <- as.numeric(b)
+    # }
+    # if(is.null(res) == F) { # node_sizes (list of int, or vertex attribute)
+    #   metric_kwds <- reticulate::dict()
+    # } 
+    # if(is.null(node_sizes) == F) { # resolution_parameter (double)
+    #   metric_kwds <- reticulate::dict(metric_kwds)
+    # }
+    
+    louvain_res <- louvain(i, j, val, dim, 
+                           as.character(partition_method), 
+                           initial_membership, 
+                           weights, 
+                           as.numeric(res),
+                           node_sizes,
+                           random_seed,
+                           as.logical(verbose))
+    
+    if(return_all) {
+        return(louvain_res)
+    } else {
+        list(membership = louvain_res$membership + 1, modularity = louvain_res$modularity)
+    }
+}
 
+# Function adapted from monocle
 #' @export
 louvain_clus <- function (data, k = 20, weight = F, louvain_iter = 1, resolution = NULL, random_seed = 0L, verbose = F, ...) 
 {

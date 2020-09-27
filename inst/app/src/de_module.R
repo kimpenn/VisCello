@@ -510,7 +510,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                 tbl <- tbl %>% dplyr::filter(significant == TRUE)
             } else { # Add human symbol for GSEA
                 if(organism == "mmu") {
-                    tbl$human_symbol <- mouse_to_human_symbol(tbl[[name_col]], in.type = "mm", HMD_HumanPhenotype)
+                    tbl$human_symbol <- VisCello:::mouse_to_human_symbol(tbl[[name_col]], in.type = "mm", HMD_HumanPhenotype)
                 }
             }
             return(tbl)

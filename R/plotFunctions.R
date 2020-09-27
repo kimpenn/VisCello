@@ -334,7 +334,7 @@ gg.overlay <- function(df) {  # produces 2 color channels and the overlay
 
 
 #' @export
-plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), cover0 = T, ...) {
+plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), cover0 = F, ...) {
     plot_col <- colnames(proj)[dim_col]
     if(!is.null(alpha)) {
         proj$alpha <- alpha
@@ -353,7 +353,7 @@ plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1,
         theme(plot.title = element_text(hjust = 0.5), legend.position = legend.position)
     
     if(cover0) {
-        is_layer2 <- proj[[group.by]] == "unannotated" | is.na(proj[[group.by]])
+        is_layer2 <- proj[[group.by]] == "unannotated" | is.na(proj[[group.by]]) | proj[[group.by]] == 0
         idx_region <- which(!is_layer2)
         pp<- pp + geom_point(aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size,color=na.col,show.legend=FALSE, stroke=0) +
             geom_point(data=proj[idx_region,],aes_string(plot_col[1],plot_col[2], alpha="alpha"), size=size, stroke = 0)
