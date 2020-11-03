@@ -12,11 +12,13 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 * You can install VisCello with code below:
 
 ``` r
+Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
 install.packages("devtools") 
 devtools::install_github("qinzhu/VisCello") # install
 library(VisCello) # load
 cello() # launch with example data
 ```
+  
 
 ## Example datasets preprocessed for VisCello
 
