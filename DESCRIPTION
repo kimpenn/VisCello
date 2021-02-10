@@ -1,7 +1,7 @@
 Package: VisCello
 Type: Package
 Title: Viscello for Visualization of Single Cell Data
-Version: 1.1.1
+Version: 1.1.2
 Author: Qin Zhu, John Murray, Kai Tan, Junhyong Kim
 Maintainer: Qin Zhu <zhuqin@pennmedicine.upenn.edu>
 Description: Viscello for Visualization of Single Cell Data.

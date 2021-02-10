@@ -799,14 +799,11 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 "input.selectCell_goal == 'compdimr'", ns=ns,
                 selectInput(ns("compdimr_type"), "Compute:", choices = list("UMAP-2D" = "UMAP-2D", "UMAP-3D" = "UMAP-3D", "PCA" = "PCA")),
                 textInput(ns("compdimr_name"), "Sample name:", placeholder="e.g., Late Neurons"),
-                numericInput(ns("compdimr_expr_cut"), "Gene cutoff (expressed cell fraction)", value=.1, max = .5, min = 0),
+                numericInput(ns("compdimr_expr_cut"), "Gene cutoff (expressed cell fraction)", value=.01, max = .5, min = 0),
                 numericInput(ns("compdimr_numpc"), "NumPC", value=50, min=2),
-                fluidRow(
-                    column(6
-                           #checkboxInput(ns("compdimr_batch"), tags$b("Correct batch"), F)
-                    ),
-                    column(6, actionButton(ns("compdimr_run"), "Compute", class = "btn-info btn_rightAlign"))
-                )
+                selectInput(ns("compdimr_bcol"), label = "Batch col", choices = colnames(cmeta$df)),
+                checkboxInput(ns("compdimr_batch"), tags$b("Correct batch"), F),
+                actionButton(ns("compdimr_run"), "Compute", class = "btn-info btn_rightAlign")
             )
         )
     })
@@ -1085,23 +1082,22 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             session$sendCustomMessage(type = "showalert", "Name already taken.")
             return()
         }
-        # if(input$compdimr_batch) {
-        #     resform <- "~as.factor(Dataset)" # May cause problem if batch is not in column "Dataset", fix later.
-        # } else {
-        #     resform <- NULL
-        # }
-        
-        
+        if(input$compdimr_batch) {
+            resform <- paste0("~", input$compdimr_bcol, "") 
+        } else {
+            resform <- NULL
+        }
 
         withProgress(message = 'Processing...', {
             incProgress(1/2)
             set.seed(2020)
             #assign("ev1cells", ev$cells, env=.GlobalEnv)
+            print(resform)
             cur_eset <- eset[,ev$cells]
             expressed_gene <- rowMeans(exprs(cur_eset) > 0) > input$compdimr_expr_cut
             cur_eset <- cur_eset[expressed_gene,]
             newvis <- new("Cello", name = input$compdimr_name, idx = match(ev$cells, colnames(eset))) 
-            newvis <- compute_pca_cello(cur_eset, newvis, num_dim = input$compdimr_numpc) # Compute PCA 
+            newvis <- compute_pca_cello(cur_eset, newvis, num_dim = input$compdimr_numpc, residualModelFormulaStr = resform) # Compute PCA 
             #newvis <- compute_tsne_newvis(cur_eset, newvis, use_dim = input$compdimr_numpc, n_component = 2, perplexity = 30) # Compute t-SNE
             if(input$compdimr_type == "UMAP-2D") {
                 newvis <- compute_umap_cello(cur_eset, newvis, use_dim = input$compdimr_numpc, n_component = 2) # Compute UMAP

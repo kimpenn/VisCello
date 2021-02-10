@@ -1,7 +1,14 @@
 
 #' @export
-compute_pca_cello <- function(eset, cello, num_dim =100) {
+compute_pca_cello <- function(eset, cello, num_dim =100, residualModelFormulaStr = NULL) {
     FM <- eset@assayData$norm_exprs
+    if (!is.null(residualModelFormulaStr)) {
+        X.model_mat <- Matrix::sparse.model.matrix(as.formula(residualModelFormulaStr), data = pData(eset), drop.unused.levels = TRUE)
+        fit <- limma::lmFit(FM, X.model_mat)
+        beta <- fit$coefficients[, -1, drop = FALSE]
+        beta[is.na(beta)] <- 0
+        FM <- as.matrix(FM) - beta %*% Matrix::t(X.model_mat[, -1])
+    }
     xm <- Matrix::rowMeans(FM)
     xsd <- sqrt(Matrix::rowMeans((FM - xm)^2))
     FM <- FM[xsd > 0, ]
