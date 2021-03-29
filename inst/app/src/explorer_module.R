@@ -706,7 +706,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                            downcell = '.rds',
                            downmeta = '.csv'
             )
-            paste('cedata-', ev$sample, format, "-", Sys.Date(), fn_ext, sep='')
+            paste('data-', ev$sample, format, "-", Sys.Date(), fn_ext, sep='')
         },
         content = function(con, format = input$selectCell_goal) {
             req(format, length(ev$cells))
@@ -714,10 +714,10 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 cur_eset <- eset[,ev$cells]
                 tmp<-ev$meta %>% tibble::rownames_to_column("Cell")
                 rownames(tmp) <- tmp$Cell
-                pData(cur_eset) <- tmp
+                pData(cur_eset) <- cbind(tmp[ev$cells,], pvals$proj[ev$cells, pvals$plot_col])
                 saveRDS(cur_eset, con, compress=F) # Not compress so that saving is faster
             } else if(format == "downmeta") {
-                write.csv(ev$meta[ev$cells, ], con)
+                write.csv(cbind(ev$meta[ev$cells, ], pvals$proj[ev$cells, pvals$plot_col]), con)
             }
         }
     )
