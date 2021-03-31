@@ -123,8 +123,8 @@ fmeta <- rowData(sce)
 # if rowData empty, you need to make a new fmeta with rownames of matrix: fmeta <- data.frame(symbol = rownames(sce)); rownames(fmeta) <- fmeta[[1]]
 fmeta[[1]] <- fmeta$symbol # Make sure first column is gene name
 eset <- new("ExpressionSet",
-             assayData = assayDataNew("environment", exprs=Matrix(sce@assays$data$counts, sparse = T), # Change 'counts' to raw count matrix
-             norm_exprs = Matrix(sce@assays$data$norm_counts, sparse = T)), # Change 'norm_counts' to raw count matrix
+             assayData = assayDataNew("environment", exprs=Matrix(sce@assays$data$counts, sparse = T), 
+             norm_exprs = Matrix(sce@assays$data$norm_counts, sparse = T)), 
              phenoData =  new("AnnotatedDataFrame", data = colData(sce)),
              featureData = new("AnnotatedDataFrame", data = fmeta))
 ```
