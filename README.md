@@ -95,11 +95,11 @@ Now the expression data and meta information required by VisCello is in place.
 * Seurat object
 
 ``` r
-fmeta <- data.frame(symbol = rownames(seurat@data)) # Seurat does not seem to store feature meta data as of version 3.0
+fmeta <- data.frame(symbol = rownames(seurat)) 
 rownames(fmeta) <- fmeta$symbol
 eset <- new("ExpressionSet",
-             assayData = assayDataNew("environment", exprs=Matrix(as.matrix(seurat@raw.data), sparse = T), 
-             norm_exprs = Matrix(as.matrix(seurat@data), sparse = T)),
+             assayData = assayDataNew("environment", exprs=seurat.hcc@assays$RNA@counts, 
+             norm_exprs = seurat.hcc@assays$RNA@data),
              phenoData =  new("AnnotatedDataFrame", data = seurat@meta.data),
              featureData = new("AnnotatedDataFrame", data = fmeta))
 ```
