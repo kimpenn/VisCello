@@ -110,7 +110,7 @@ eset <- new("ExpressionSet",
 fmeta <- fData(cds)
 fmeta[[1]] <- fmeta$gene_short_name # Make first column gene name
 eset <- new("ExpressionSet",
-             assayData = assayDataNew("environment", exprs=Matrix(as.matrix(exprs(cds)), sparse = T),  
+             assayData = assayDataNew("environment", exprs=Matrix(exprs(cds), sparse = T),  
              norm_exprs = Matrix(log2(Matrix::t(Matrix::t(FM)/sizeFactors(cds))+1), sparse = T)), # Note this is equivalent to 'log' normalization method in monocle, you can use other normalization function
              phenoData =  new("AnnotatedDataFrame", data = pData(cds)),
              featureData = new("AnnotatedDataFrame", data = fmeta))
