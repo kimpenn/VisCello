@@ -1252,6 +1252,8 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
             df <- as.data.frame(as.matrix(exprs(eset)[curg, ev$vis@idx[cur_idx]]))
         }
         
+        noise <- rnorm(n = length(x = df))/1e+05
+        df <- df + noise
         # assign("df1", df, env = .GlobalEnv)
         # assign("cur_meta1", cur_meta, env = .GlobalEnv)
         feature_plot(df, input$bp_gene, 
