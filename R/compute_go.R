@@ -61,6 +61,7 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
         }
         }
     } else {
+        print(1)
         ego_bplist <- lapply(1:length(gene_list), function(i){
             if(is.null(gene_list[[i]])) return(NULL)
             enrichGO(gene        = gene_list[[i]]$ENTREZID,
@@ -72,11 +73,12 @@ compute_go <- function(de_list, bg_list, type = "BP", organism = c("mmu", "cel",
                      qvalueCutoff  = 0.05,
                      readable      = TRUE)
         })
-
+        print(2)
         enrich_list <- lapply(1:length(gene_list), function(i){
             if(is.null(ego_bplist[[i]])) return(NULL)
             ego_bplist[[i]]@result
         })
+        print(3)
     }
     names(enrich_list) <- names(de_list)
     return(enrich_list)

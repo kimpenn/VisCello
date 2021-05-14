@@ -540,7 +540,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
 
     
     pp_factor <- reactive({
-        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend.title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = pvals$text_size, legend.text.size = pvals$text_size*3, ncol=4, breaks = pvals$factor_breaks)
+        plotProj(pvals$proj, dim_col = which(colnames(pvals$proj) %in% pvals$plot_col), group.by=pvals$proj_colorBy, pal=pvals$factor_color, size = pvals$marker_size, plot_title=NULL, legend.title = pvals$legend_title, na.col = "lightgrey", alpha=pvals$proj$alpha, alpha_level=pvals$alpha_level, legend=pvals$legend, onplotAnnot = pvals$onplotAnnot, onplotAnnotSize = pvals$text_size, legend.text.size = pvals$text_size*3, ncol=4, breaks = pvals$factor_breaks, cover0 = T)
     })    
     
     pp_numeric <- reactive({
@@ -962,7 +962,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         ns <- session$ns
         input$plot_config_reset
         req(!input$proj_colorBy %in% c(ev$factor_cols, 'gene.expr'))
-        v_limit <- round(quantile(ev$value, .975, na.rm=T), 1)
+        v_limit <- max(round(quantile(ev$value, .975, na.rm=T), 1), 1)
         dropdownButton2(inputId=ns("v_cutoff"),
                         width = "500px",
                         plotOutput(ns("value_histogram_plot")),
