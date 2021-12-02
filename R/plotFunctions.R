@@ -335,6 +335,8 @@ gg.overlay <- function(df) {  # produces 2 color channels and the overlay
 
 #' @export
 plotProj <- function (proj, dim_col = c(1,2), group.by=NULL, pal=NULL, size = 1, plot_title=NULL, na.col = "lightgrey", alpha=NULL, alpha_level=0.1, legend=T, trans = "identity", onplotAnnot=NULL, onplotAnnotSize = 2,  legend.size = 4, legend.text.size = 3, legend.position = "top", legend.title = waiver(), keywidth=0.1, keyheight=0.1, ncol = NULL, nudge_x = 0, nudge_y = 0, limits = NULL, breaks = waiver(), cover0 = F, ...) {
+    colnames(proj)[colnames(proj) == group.by] = make.names(group.by)
+    group.by <- make.names(group.by)
     plot_col <- colnames(proj)[dim_col]
     if(!is.null(alpha)) {
         proj$alpha <- alpha

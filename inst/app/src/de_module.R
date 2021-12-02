@@ -531,7 +531,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
                             column(6, numericInput(ns("hmap_numg"), "Max #DEG/Group", min=2, max = 500, value = 30, step=1))
                         ),
                         fluidRow(
-                            column(6, selectInput(ns("hmap_dscale"), "Data Scale", choices=list("scaled log2" = "scaled log2", "log2"="log2"))),
+                            column(6, selectInput(ns("hmap_dscale"), "Data Scale", choices=list("scaled log" = "scaled log", "log"="log"))),
                             column(6, numericInput(ns("hmap_pseudoc"), "Pseudocount", min=1e-5, max = 1, value = 1, step=1e-3))
                         ),
                         fluidRow(
@@ -568,9 +568,9 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         } else {
             de_res$heatmap_color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100)
         }
-        if(input$hmap_dscale == "scaled log2"){
+        if(input$hmap_dscale == "scaled log"){
             de_res$scale = T
-        } else if(input$hmap_dscale == "log2") {
+        } else if(input$hmap_dscale == "log") {
             de_res$scale = F
         }
     })
@@ -581,7 +581,7 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         # if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
         #if(is.null(de_show())) return()
         withProgress(message="Rendering heatmap..", {
-            if(input$de_hmap_scale == "log2") {
+            if(input$de_hmap_scale == "log") {
                 dat <- eset@assayData$norm_exprs[de_res$feature_idx, de_res$test_idx]
                 if(NEG_VAL) dat <- t(apply(dat, 1, function(x) {x[is.infinite(x) & x < 0 ] <- min(x[!is.infinite(x)]); x[is.infinite(x) & x > 0 ] <- max(x[!is.infinite(x)]); return(x)}))
             } else {

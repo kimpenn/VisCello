@@ -35,7 +35,7 @@ heatmaply_plot <- function (dat, genes_to_plot, cells_to_plot, n_genes = 50, gro
         cell_indices <- unlist(lapply(cells_to_plot, function(x) x$ix))
     }
     if(log) {
-        value <- log10(dat[gene_indices, cell_indices]+pseudocount)
+        value <- log(dat[gene_indices, cell_indices]+pseudocount)
     } else {
         value <- dat[gene_indices, cell_indices]
     }

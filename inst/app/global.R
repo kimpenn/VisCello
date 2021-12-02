@@ -52,7 +52,7 @@ pmeta_attr$is_numeric <- sapply(as.character(pmeta_attr$meta_id), function(x) {
 
 # Edit if necessary, Which meta to show 
 pmeta_attr$dpal <- ifelse(pmeta_attr$is_numeric, "viridis", "Set1")
-pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log10", NA)
+pmeta_attr$dscale <- ifelse(pmeta_attr$is_numeric, "log", NA)
 pmeta_attr$dscale[which(pmeta_attr$meta_id %in% c("Size_Factor"))] <- "identity"
 
 
