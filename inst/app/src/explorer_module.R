@@ -382,15 +382,16 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
         }
         
         if(grepl("PCA", input$proj_type)) {
-            if(!grepl("3D", input$proj_type)) {
-                req(input$pca2d_v1)
-                plot_col <- c(input$pca2d_v1, input$pca2d_v2)
-            } else {
-                req(input$pca3d_v1, input$pca3d_v2, input$pca3d_v3)
-                plot_col <- c(input$pca3d_v1, input$pca3d_v2, input$pca3d_v3)
-            }
             ptype = "PCA"
             proj <- ev$vis@proj[[ptype]]
+            if(!grepl("3D", input$proj_type)) {
+                req(input$pca2d_v1)
+                plot_col <- colnames(proj)[as.numeric(gsub("PC", "", c(input$pca2d_v1, input$pca2d_v2)))]
+            } else {
+                req(input$pca3d_v1, input$pca3d_v2, input$pca3d_v3)
+                plot_col <- colnames(proj)[as.numeric(gsub("PC", "", c(input$pca3d_v1, input$pca3d_v2, input$pca3d_v3)))]
+            }
+
         } else {
             ptype = input$proj_type
             req(ptype %in% names(ev$vis@proj))

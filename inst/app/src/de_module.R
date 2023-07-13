@@ -654,15 +654,16 @@ de_server <- function(input, output, session, sclist = NULL, cmeta = NULL, organ
         fluidRow(
             column(6),
             column(3, selectInput(ns("de_filter"), NULL, choices = c("Show only significant"="significant" ,
-                                                                     "Show stats for all genes" = "all"
-                                                                     ), selected= "significant")),
+                                                                     "Show stats for all genes" = "all"), selected= "significant")),
             column(3, downloadButton(ns("download_de_res"), "Download DE Table", class = "btn_rightAlign"))
         )
     })
     
     output$download_de_res <- downloadHandler(
         filename = function() {
-            paste(input$de_sample, "_", paste0(de_idx$group_name, collapse="_vs_"), "_", Sys.Date(), '_de', "_", input$de_filter, '.xlsx', sep='')
+            group_name <- paste0(make.names(de_idx$group_name), collapse="_vs_")
+            if(nchar(group_name) > 20) group_name = "custom"
+            paste(input$de_sample, "_", group_name, "_", Sys.Date(), '_de', "_", input$de_filter, '.xlsx', sep='')
         },
         content = function(con) {
             req(de_show())

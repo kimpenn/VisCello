@@ -32,7 +32,7 @@ meta_order <- c(colnames(pData(eset)), colnames(clist[[1]]@pmeta))
 names(meta_order) <- meta_order
 
 # Don't show factors that's not useful to the user
-meta_order <- meta_order[!meta_order %in% c("barcode")]
+meta_order <- meta_order[!meta_order %in% c("barcode", "cell_barcode")]
 # Do not edit below
 meta_order["Gene Expression"] = "gene.expr"
 pmeta_attr <- data.frame(meta_id = meta_order, meta_name = names(meta_order), stringsAsFactors=FALSE)
