@@ -18,7 +18,8 @@ devtools::install_github("qinzhu/VisCello") # install
 library(VisCello) # load
 cello() # launch with example data
 ```
-  
+
+Please post installation errors to github issues and we will address them as soon as we can.
 
 ## Example datasets preprocessed for VisCello
 
