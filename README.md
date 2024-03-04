@@ -14,6 +14,7 @@ Qin Zhu, Kim Lab & Tan Lab, University of Pennsylvania
 ``` r
 Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
 install.packages("devtools") 
+devtools::install_github("cysouw/qlcMatrix") # Due to recent removal of this package from CRAN
 devtools::install_github("qinzhu/VisCello") # install
 library(VisCello) # load
 cello() # launch with example data
