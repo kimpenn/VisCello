@@ -6,7 +6,7 @@ factor_color_opt <- function() {
 }
 
 #' @export
-get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
+get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T, permute = T)
 {
     unq <- unique(labels)
     hmcol <- RColorBrewer::brewer.pal(maxCol, pal)
@@ -18,6 +18,11 @@ get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
         cp <- colorRampPalette(hmcol)
         hmcol <- cp(length(unq))
     #}
+    
+    if(permute) {
+        set.seed(1)
+        hmcol <- sample(hmcol, length(hmcol), replace = FALSE)
+    }
     for (i in 1:length(unq)) {
         colv[labels == unq[i]] <- hmcol[i]
     }
@@ -169,7 +174,7 @@ visualize_gene_expression <- function (gene_values, gene_probes, projection, lim
         gene_values[gene_values < limits[1]] <- limits[1]
         gene_values[gene_values > limits[2]] <- limits[2]
         proj_gene <- data.frame(cbind(projection[c(1,2)], gene_values))
-        proj_gene_melt <- melt(proj_gene, id.vars = colnames(projection))
+        proj_gene_melt <- reshape2::melt(proj_gene, id.vars = colnames(projection))
         idx_region <- which(proj_gene_melt$value > 0)
         use_color <- get_numeric_color(pal)
         proj_gene_melt$alpha <- rep(alpha, length(gene_probes))
