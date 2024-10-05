@@ -6,7 +6,8 @@
 \usage{
 cello(
   data_path = paste0(system.file("app", package = "VisCello"), "/data"),
-  RStudio = F
+  RStudio = F,
+  launch.browser = getOption("shiny.launch.browser", interactive())
 )
 }
 \description{

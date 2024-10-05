@@ -5,7 +5,7 @@
 #' cello()
 #' @import shiny
 #' @export
-cello <- function(data_path = paste0(system.file("app", package='VisCello'),"/data"), RStudio = F) {
+cello <- function(data_path = paste0(system.file("app", package='VisCello'),"/data"), RStudio = F, launch.browser = getOption("shiny.launch.browser", interactive())) {
     Sys.setenv("R_MAX_NUM_DLLS"=180)
     cat("Launching VisCello...")
     if(RStudio) {
@@ -34,7 +34,7 @@ cello <- function(data_path = paste0(system.file("app", package='VisCello'),"/da
     }, error = function(x){
         stop("Cannot find eset or clist file in data folder, if data_path is correct.")
     })
-    shiny::runApp(system.file("app", package='VisCello'))
+    shiny::runApp(system.file("app", package='VisCello'), launch.browser=launch.browser)
 }
 
 

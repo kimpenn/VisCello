@@ -660,7 +660,7 @@ explorer_server <- function(input, output, session, sclist, useid, cmeta = NULL)
                 if(length(shut_device)) dev.off(which = shut_device) # Make sure ggsave does not change graphic device
             } else {
                 req(pp1_3d())
-                htmlwidgets::saveWidget(pp1_3d(), con)
+                htmlwidgets::saveWidget(pp1_3d() %>% hide_legend(), con)
             }
         }
     )
